@@ -1,0 +1,54 @@
+---
+  title: Ecosystems and Biogeochemistry Laboratory - Techniques in Terrestrial 
+  Ecosystem Ecology
+---
+
+## Rmarkdown Notebooks
+
+Rmarkdown is a format which combines cells of text (markdown) and code (R). This format allows the sure to run the cells in any order, however to access the results, chronological order is maintained. When you execute code within the notebook, the results appear beneath the code.
+
+Try executing this chunk below by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*.
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+## Packages
+
+Load the packages below by executing the code chunk. If the packages are not installed yet, install them first using the following format: install.packages("package_name"). The code below should automatically check for the packages and install them if they are missing, restarting R multiple times to install/update each package might be necessary.
+
+```{r}
+if(!require(ggplot2)){
+    install.packages('ggplot2')
+    library(ggplot2)
+}
+```
+
+```{r}
+if(!require(tidyverse)){
+    install.packages('tidyvers')
+    library(tidyverse)
+}
+```
+
+## Load Data
+
+To access the mastersheet data, please use the 2nd cell below and skip the 1st one completely.
+
+```{r 1st}
+data <- read.csv('../../data/EcoLab 2025 Mastersheet.csv', sep = ',')
+```
+
+```{r 2nd}
+data <- read.csv(file.choose(), sep = ',')
+```
+
+## Clean Data
+```{r}
+data_clean <- data 
+```
+
