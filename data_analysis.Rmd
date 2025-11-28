@@ -3,7 +3,7 @@
   Ecosystem Ecology
 ---
 
-## Rmarkdown Notebooks
+## *Rmarkdown Notebooks*
 
 Rmarkdown is a format which combines cells of text (markdown) and code (R). This format allows the sure to run the cells in any order, however to access the results, chronological order is maintained. When you execute code within the notebook, the results appear beneath the code.
 
@@ -17,7 +17,17 @@ Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by press
 
 When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
 
-## Packages
+## *Research Question/-s*
+
+Main: 
+What is the effect of the soil depth on the data?
+
+Sub: 
+Does the biogeochemical composition of the individual layers differ?
+If yes, in what way?
+What might the results suggest?
+
+## *Load Packages*
 
 Load the packages below by executing the code chunk. If the packages are not installed yet, install them first using the following format: install.packages("package_name"). The code below should automatically check for the packages and install them if they are missing, restarting R multiple times to install/update each package might be necessary.
 
@@ -35,7 +45,7 @@ if(!require(tidyverse)){
 }
 ```
 
-## Load Data
+## *Load Data*
 
 To access the mastersheet data, please use the 2nd cell below and skip the 1st one completely.
 
@@ -44,11 +54,71 @@ data <- read.csv('../../data/EcoLab 2025 Mastersheet.csv', sep = ',')
 ```
 
 ```{r 2nd}
-data <- read.csv(file.choose(), sep = ',')
+#data <- read.csv(file.choose(), sep = ',')
 ```
 
-## Clean Data
+## *Clean Data*
+
 ```{r}
-data_clean <- data 
+data_clean <- data[,1:55] # create a copy
+
+colnames(data_clean) <- data[3,1:55] # use the values in the 3rd row as the column names
+
+colnames(data_clean) <- gsub(' ', '_', colnames(data_clean)) # change space to '_'
+
+# fix column name issues:
+colnames(data_clean)[colnames(data_clean) == 'phoD_'] <- 'phoD'
+colnames(data_clean)[colnames(data_clean) == 'DOC_'] <- 'DOC'
+colnames(data_clean)[colnames(data_clean) == 'TDN_'] <- 'TDN'
+
+data_clean <- data_clean[5:19,] # keep only rows 5 to 19
+
+rownames(data_clean) <- seq(1,15,1) # reset the row names to become 1 to 15 
+
+#if necessary, uncomment the comment below and run
+#data_clean[20,] <- data[4,] # add the units into the last row 
+
+data_clean # print the output
+```
+
+```{r}
+units <- data[4,1:55] # add the units into the last row of an object storing units
+
+colnames(units) <- data[3,1:55] # use the values in the 3rd row as the column names
+
+colnames(units) <- gsub(' ', '_', colnames(units)) # change space to '_'
+
+units # print output
+```
+
+## Variables of Interest
+
+Before proceeding with plotting, define the variables from the list first.
+
+```{r}
+colnames(data_clean)
+```
+
+For example, for the x-axis we would like 'pH' and for the y axis, 'TP': x = 'pH' and y = 'TP'.
+
+```{r}
+x = 'Horizon'
+y = 'Pmic'
+z = ''
+w = ''
+q = ''
+```
+
+## Bar Plots
+
+Bar plots are suitable for showing averages together with standard deviation or standard error mean depicted as whiskers, e.g. average concentration of TP, etc.
+
+```{r}
+ggplot(data_clean, aes(data_clean[,x], data_clean[,y]))+
+  geom_boxplot()
+```
+```{r}
+ggplot(data_clean, aes(x=data_clean[,'Horizon'], y=data_clean[,'Pmic']))+
+  geom_boxplot()
 ```
 
