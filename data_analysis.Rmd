@@ -44,6 +44,12 @@ if(!require(tidyverse)){
     library(tidyverse)
 }
 ```
+```{r}
+if(!require(GGally)){
+    install.packages('GGally')
+    library(GGally)
+}
+```
 
 ## *Load Data*
 
@@ -66,6 +72,9 @@ colnames(data_clean) <- data[3,1:55] # use the values in the 3rd row as the colu
 
 colnames(data_clean) <- gsub(' ', '_', colnames(data_clean)) # change space to '_'
 
+# remove second pH column:
+data_clean <- data_clean[, -8]
+
 # fix column name issues:
 colnames(data_clean)[colnames(data_clean) == 'phoD_'] <- 'phoD'
 colnames(data_clean)[colnames(data_clean) == 'DOC_'] <- 'DOC'
@@ -75,6 +84,13 @@ data_clean <- data_clean[5:19,] # keep only rows 5 to 19
 
 rownames(data_clean) <- seq(1,15,1) # reset the row names to become 1 to 15 
 
+# correction of value types
+data_clean[, 3] <- lapply(data_clean[,3], as.numeric)
+data_clean[, 5:54] <- lapply(data_clean[,5:54], as.numeric)
+#data_clean[, 1] <- lapply(data_clean[,1], as.factor)
+#data_clean[, 3] <- lapply(data_clean[,3], as.factor)
+#data_clean[, 4] <- lapply(data_clean[,4], as.factor)
+
 #if necessary, uncomment the comment below and run
 #data_clean[20,] <- data[4,] # add the units into the last row 
 
@@ -82,9 +98,9 @@ data_clean # print the output
 ```
 
 ```{r}
-units <- data[4,1:55] # add the units into the last row of an object storing units
+units <- data[4,1:54] # add the units into the last row of an object storing units
 
-colnames(units) <- data[3,1:55] # use the values in the 3rd row as the column names
+colnames(units) <- data[3,1:54] # use the values in the 3rd row as the column names
 
 colnames(units) <- gsub(' ', '_', colnames(units)) # change space to '_'
 
@@ -102,11 +118,14 @@ colnames(data_clean)
 For example, for the x-axis we would like 'pH' and for the y axis, 'TP': x = 'pH' and y = 'TP'.
 
 ```{r}
-x = 'Horizon'
+x = 'Depth'
 y = 'Pmic'
-z = ''
+z = 'Soil_TP'
 w = ''
 q = ''
+fill = ''
+colour = ''
+group = 'Depth'
 ```
 
 ## Bar Plots
@@ -114,11 +133,92 @@ q = ''
 Bar plots are suitable for showing averages together with standard deviation or standard error mean depicted as whiskers, e.g. average concentration of TP, etc.
 
 ```{r}
-ggplot(data_clean, aes(data_clean[,x], data_clean[,y]))+
-  geom_boxplot()
+ggplot(data_clean, aes(data_clean[,x], data_clean[,y], group = data_clean[,group], fill = data_clean[,]))+
+  
+  geom_boxplot(width = 0.3, lwd = 0.2)+
+  
+    labs(
+      title = paste(y, ' x ', x),
+      y = paste(y, ' ', units[1,y]),
+      x = paste(x),
+      fill = 'Legend')+
+      #colour = "Sample Type",
+      #shape = "Site",
+      #linetype = "Sample Type")+
+  
+  theme(
+    title = element_text(size=16),
+    axis.title.x = element_text(size=16), 
+    axis.text.x = element_text(size=16),
+    axis.title.y = element_text(size=16), 
+    axis.text.y = element_text(size=16),
+    legend.text = element_text(size=12), 
+    legend.title = element_text(size=14))+
+  theme_bw()
 ```
 ```{r}
-ggplot(data_clean, aes(x=data_clean[,'Horizon'], y=data_clean[,'Pmic']))+
-  geom_boxplot()
+mean_data <- data_clean %>%
+  group_by(Depth) %>%
+  summarise(mean_y = mean(data_clean[,y]))
+
+mean_data[mean_data$Depth == 'A'] <- mean(data_clean$Pmic[mean_data$Depth == 'A'])
+
+mean_data$mean_y[mean_data$Depth == "A"] <- mean(data_clean$Pmic[data_clean$Depth == "A"])
+mean_data$mean_y[mean_data$Depth == "B"] <- mean(data_clean$Pmic[data_clean$Depth == "B"])
+mean_data$mean_y[mean_data$Depth == "C"] <- mean(data_clean$Pmic[data_clean$Depth == "C"])
+
+ggplot(mean_data, aes(mean_y, fill = Depth))+
+  geom_bar()+
+  
+  #scale_x_discrete(name = "Soil Depth") +
+  #scale_y_continuous(name = paste(y, ' ', units[1,y])) +
+  
+    labs(title = paste(y, ' x ', x),
+       y = paste(y, ' ', units[1,y]),
+       #x = 'Soil Depth',
+       fill = 'Legend')+
+       #colour = "Sample Type",
+       #shape = "Site",
+       #linetype = "Sample Type")+
+  theme_bw()+
+  
+  theme(axis.title.x = element_text(size=16), axis.text.x = element_text(size=16),
+        axis.title.y = element_text(size=16), axis.text.y = element_text(size=16),
+        legend.text = element_text(size=12), legend.title = element_text(size=14))
+```
+## ANOVA
+
+```{r}
+anova <- aov(data_clean[,y]~data_clean[,x])
+summary(anova)
+```
+
+## Tukey HSD
+```{r}
+tukey <- TukeyHSD(anova)
+print(tukey)
+```
+
+## Linear Regression Graphical
+```{r}
+ggplot(data_clean, aes(x = data_clean[,z], y = data_clean[,y]))+
+  geom_point(size=4, aes(colour = data_clean[,x])) +
+  geom_smooth(method = "lm")  +
+  scale_x_continuous (name = "TP") +
+  scale_y_continuous(name = "Pmic")
+```
+
+## Linear Regression Statistical
+
+```{r}
+linear_reg <- lm(data_clean[,y]~data_clean[,z])
+summary(linear_reg)
+```
+
+## Correlation Plot
+
+```{r}
+ggpairs(data_clean, columns = 34:41, title = "correlations", aes(colour = Depth))+
+  theme_bw(base_size = 8)
 ```
 
