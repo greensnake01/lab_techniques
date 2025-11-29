@@ -3,7 +3,7 @@
   Ecosystem Ecology
 ---
 
-## *Rmarkdown Notebooks*
+# 0 *Rmarkdown Notebooks*
 
 Rmarkdown is a format which combines cells of text (markdown) and code (R). This format allows the sure to run the cells in any order, however to access the results, chronological order is maintained. When you execute code within the notebook, the results appear beneath the code.
 
@@ -17,19 +17,17 @@ Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by press
 
 When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
 
-## *Research Question/-s*
+# 1 *Research Question/-s*
 
-Main: 
-What is the effect of the soil depth on the data?
+Main: What is the effect of the soil depth on the data?
 
-Sub: 
-Does the biogeochemical composition of the individual layers differ?
-If yes, in what way?
-What might the results suggest?
+Sub: Does the biogeochemical composition of the individual layers differ? If yes, in what way? What might the results suggest?
 
-## *Load Packages*
+# 2 *Load Packages*
 
 Load the packages below by executing the code chunk. If the packages are not installed yet, install them first using the following format: install.packages("package_name"). The code below should automatically check for the packages and install them if they are missing, restarting R multiple times to install/update each package might be necessary.
+
+The package *ggplot2* serves for plotting.
 
 ```{r}
 if(!require(ggplot2)){
@@ -38,12 +36,26 @@ if(!require(ggplot2)){
 }
 ```
 
+The package *tidyverse* serves as an alternative to data handling.
+
 ```{r}
 if(!require(tidyverse)){
     install.packages('tidyvers')
     library(tidyverse)
 }
 ```
+
+The package *car* serves for Levene's test of homogeneity of variances.
+
+```{r}
+if(!require(car)){
+    install.packages('car')
+    library(car)
+}
+```
+
+The package *GGally* serves for correlation plots.
+
 ```{r}
 if(!require(GGally)){
     install.packages('GGally')
@@ -51,9 +63,9 @@ if(!require(GGally)){
 }
 ```
 
-## *Load Data*
+# 3 *Load Data*
 
-To access the mastersheet data, please use the 2nd cell below and skip the 1st one completely.
+To access the mastersheet data, please use the 2nd cell below (uncomment and run) and skip the 1st cell completely.
 
 ```{r 1st}
 data <- read.csv('../../data/EcoLab 2025 Mastersheet.csv', sep = ',')
@@ -63,17 +75,17 @@ data <- read.csv('../../data/EcoLab 2025 Mastersheet.csv', sep = ',')
 #data <- read.csv(file.choose(), sep = ',')
 ```
 
-## *Clean Data*
+# 4 *Clean Data*
 
 ```{r}
-data_clean <- data[,1:55] # create a copy
+data_clean <- data[, 1:(length(data)-3)] # create a copy with all necessary columns
 
-colnames(data_clean) <- data[3,1:55] # use the values in the 3rd row as the column names
-
-colnames(data_clean) <- gsub(' ', '_', colnames(data_clean)) # change space to '_'
+colnames(data_clean) <- data[3, 1:(length(data)-3)] # use the values in the 3rd row as the column names
 
 # remove second pH column:
 data_clean <- data_clean[, -8]
+
+colnames(data_clean) <- gsub(' ', '_', colnames(data_clean)) # change space to '_'
 
 # fix column name issues:
 colnames(data_clean)[colnames(data_clean) == 'phoD_'] <- 'phoD'
@@ -85,121 +97,366 @@ data_clean <- data_clean[5:19,] # keep only rows 5 to 19
 rownames(data_clean) <- seq(1,15,1) # reset the row names to become 1 to 15 
 
 # correction of value types
-data_clean[, 3] <- lapply(data_clean[,3], as.numeric)
-data_clean[, 5:54] <- lapply(data_clean[,5:54], as.numeric)
-#data_clean[, 1] <- lapply(data_clean[,1], as.factor)
-#data_clean[, 3] <- lapply(data_clean[,3], as.factor)
-#data_clean[, 4] <- lapply(data_clean[,4], as.factor)
+data_clean[colnames(data_clean) == 'Plot'] <- lapply(data_clean[colnames(data_clean) == 'Plot'], as.numeric)
+data_clean[, 5:length(data_clean)] <- lapply(data_clean[, 5:length(data_clean)], as.numeric)
+
+data_clean$Sample_ID <- factor(data_clean$Sample_ID)
+data_clean$Horizon <- factor(data_clean$Horizon, levels = c('mineral topsoil', 'upper subsoil', 'lower subsoil'))
+data_clean$Depth <- factor(data_clean$Depth, levels = c('A', 'B', 'C'))
 
 #if necessary, uncomment the comment below and run
 #data_clean[20,] <- data[4,] # add the units into the last row 
 
-data_clean # print the output
+str(data_clean) # print the value types
 ```
 
 ```{r}
-units <- data[4,1:54] # add the units into the last row of an object storing units
+units <- data[4, 1:length(data_clean)] # add the units into the last row of an object storing units
 
-colnames(units) <- data[3,1:54] # use the values in the 3rd row as the column names
+colnames(units) <- data[3, 1:length(data_clean)] # use the values in the 3rd row as the column names
 
 colnames(units) <- gsub(' ', '_', colnames(units)) # change space to '_'
 
 units # print output
 ```
 
-## Variables of Interest
+# 5 *Variables of Interest*
 
 Before proceeding with plotting, define the variables from the list first.
 
 ```{r}
-colnames(data_clean)
+variables = colnames(data_clean)
+print(variables)
 ```
 
 For example, for the x-axis we would like 'pH' and for the y axis, 'TP': x = 'pH' and y = 'TP'.
 
 ```{r}
-x = 'Depth'
-y = 'Pmic'
-z = 'Soil_TP'
-w = ''
-q = ''
-fill = ''
-colour = ''
-group = 'Depth'
+x = 4
+y = 38
+z = 35
+w = 1
+q = 1
+fill = 4
+colour = 1
+
+col1 = '#5e3023'
+col2 = '#c08552'
+col3 = '#f3e9dc'
 ```
 
-## Bar Plots
+# 6 *Box Plots*
 
-Bar plots are suitable for showing averages together with standard deviation or standard error mean depicted as whiskers, e.g. average concentration of TP, etc.
+Box plots are suitable for showing medians (better, when distribution is skewed) together with minimum, maximum values and outliers, as well as the position of 50% of the data.
 
 ```{r}
-ggplot(data_clean, aes(data_clean[,x], data_clean[,y], group = data_clean[,group], fill = data_clean[,]))+
+ggplot(data_clean, aes(.data[[variables[x]]],
+                       .data[[variables[y]]], 
+                       fill = .data[[variables[fill]]]))+
   
-  geom_boxplot(width = 0.3, lwd = 0.2)+
+  geom_boxplot(width = 0.5, 
+               lwd = 0.5,
+               colour = 'black')+
   
-    labs(
-      title = paste(y, ' x ', x),
-      y = paste(y, ' ', units[1,y]),
-      x = paste(x),
-      fill = 'Legend')+
-      #colour = "Sample Type",
-      #shape = "Site",
-      #linetype = "Sample Type")+
+  scale_fill_manual(values = c(col1, col2, col3))+
   
-  theme(
-    title = element_text(size=16),
-    axis.title.x = element_text(size=16), 
-    axis.text.x = element_text(size=16),
-    axis.title.y = element_text(size=16), 
-    axis.text.y = element_text(size=16),
-    legend.text = element_text(size=12), 
-    legend.title = element_text(size=14))+
+    labs(title = paste(variables[y], ' x ', variables[x]),
+         y = paste(variables[y], ' ', units[1,variables[y]]),
+         x = paste(variables[x]),
+         fill = 'Legend')+
+  
+  theme(plot.title = element_text(size=16, face = 'bold'),
+        axis.title.x = element_text(size=16), 
+        axis.text.x = element_text(size=16),
+        axis.title.y = element_text(size=16), 
+        axis.text.y = element_text(size=16),
+        legend.text = element_text(size=12), 
+        legend.title = element_text(size=14))+
+  
   theme_bw()
 ```
-```{r}
-mean_data <- data_clean %>%
-  group_by(Depth) %>%
-  summarise(mean_y = mean(data_clean[,y]))
 
-mean_data[mean_data$Depth == 'A'] <- mean(data_clean$Pmic[mean_data$Depth == 'A'])
+# 7 *Calculate Means, SDs, SEMs*
 
-mean_data$mean_y[mean_data$Depth == "A"] <- mean(data_clean$Pmic[data_clean$Depth == "A"])
-mean_data$mean_y[mean_data$Depth == "B"] <- mean(data_clean$Pmic[data_clean$Depth == "B"])
-mean_data$mean_y[mean_data$Depth == "C"] <- mean(data_clean$Pmic[data_clean$Depth == "C"])
-
-ggplot(mean_data, aes(mean_y, fill = Depth))+
-  geom_bar()+
-  
-  #scale_x_discrete(name = "Soil Depth") +
-  #scale_y_continuous(name = paste(y, ' ', units[1,y])) +
-  
-    labs(title = paste(y, ' x ', x),
-       y = paste(y, ' ', units[1,y]),
-       #x = 'Soil Depth',
-       fill = 'Legend')+
-       #colour = "Sample Type",
-       #shape = "Site",
-       #linetype = "Sample Type")+
-  theme_bw()+
-  
-  theme(axis.title.x = element_text(size=16), axis.text.x = element_text(size=16),
-        axis.title.y = element_text(size=16), axis.text.y = element_text(size=16),
-        legend.text = element_text(size=12), legend.title = element_text(size=14))
-```
-## ANOVA
+Calculations of means, standard deviations and standard error means of variables.
 
 ```{r}
-anova <- aov(data_clean[,y]~data_clean[,x])
-summary(anova)
+# calculation of means per one variable
+# mean <- data_clean %>%
+#   group_by(.data[[variables[x]]]) %>%
+#   summarise(mean = mean(.data[[variables[y]]])) %>%
+#   rename(!!paste(variables[y]) := mean)
+
+# calculation of means for all variables
+mean <- data.frame(Depth = c('A', 'B', 'C'))
+sd <- data.frame(Depth = c('A', 'B', 'C'))
+sem <- data.frame(Depth = c('A', 'B', 'C'))
+
+for (variable in 5:length(variables)){
+  
+  mean_results <- data_clean %>%
+    group_by(.data[[variables[x]]]) %>%
+    summarise(mean = mean(.data[[variables[variable]]], na.rm = T)) %>%
+    rename(!!paste(variables[variable]) := mean)
+
+mean[, variables[variable]] <- mean_results[, 2]
+
+
+  sd_results <- data_clean %>%
+    group_by(.data[[variables[x]]]) %>%
+    summarise(sd = sd(.data[[variables[variable]]], na.rm = T)) %>%
+    rename(!!paste(variables[variable]) := sd)
+
+sd[, variables[variable]] <- sd_results[, 2]
+
+  sem_results <- data_clean %>%
+    group_by(.data[[variables[x]]]) %>%
+    summarise(sem = sd(.data[[variables[variable]]], na.rm = T)) %>%
+    rename(!!paste(variables[variable]) := sem)
+  
+  sem[, variables[variable]] <- sem_results[, 2]
+  
+  sample_size = nrow(data_clean)
+}
+
+sample_size = nrow(data_clean)
+  
+for (r in 1:nrow(sem)){
+  for (c in 2:ncol(sem)){
+      sem[r, c] <- sem[r, c] / sqrt(sample_size)
+  }
+}
+
+print(mean)
+print(sd)
+print(sem)
 ```
 
-## Tukey HSD
+# 8 *Bar Plots*
+
+Bar plots are suitable for showing averages together with standard deviation or standard error mean depicted as whiskers, e.g. average concentrations of TP, etc.
+
+## 8.1 *SD*
+
+If average is 7 and SD is 2, SD shows the variation, the range within which all values are found. In this case, we could expect that most values fall between 5 and 9 (7 ± 2). Used to show biological/real variation.
+
 ```{r}
-tukey <- TukeyHSD(anova)
-print(tukey)
+ggplot(mean, aes(.data[[variables[x]]], 
+                 .data[[variables[y]]],
+                 fill = .data[[variables[fill]]]))+
+  geom_col()+
+  
+  geom_errorbar(aes(ymin = mean[[variables[y]]] - sd[[variables[y]]],
+                    ymax = mean[[variables[y]]] + sd[[variables[y]]]),
+                width = 0.3,
+                size = 0.7)+
+  
+  scale_fill_manual(values = c(col1, col2, col3))+
+  
+    labs(title = paste(variables[y], ' x ', variables[x]),
+         y = paste(variables[y], ' ', units[1,variables[y]]),
+         x = paste(variables[x]),
+         fill = 'Legend')+
+  
+  theme(title = element_text(size=16, face = 'bold'),
+        axis.title.x = element_text(size=16), 
+        axis.text.x = element_text(size=16),
+        axis.title.y = element_text(size=16), 
+        axis.text.y = element_text(size=16),
+        legend.text = element_text(size=12), 
+        legend.title = element_text(size=14))+
+  
+theme_bw()
 ```
 
-## Linear Regression Graphical
+## 8.2 *SEM*
+
+If average is 7 and SEM is 0.5, SEM tells us what values we could expect if we repeated the measurements again. In this case, we could expect that most likely the average would fall between 6.5 and 7.5 (7 ± 0.5). Used to show how confident we are in the mean.
+
+```{r}
+ggplot(mean, aes(.data[[variables[x]]], 
+                 .data[[variables[y]]],
+                 fill = .data[[variables[fill]]]))+
+  geom_col()+
+  
+  geom_errorbar(aes(ymin = mean[[variables[y]]] - sem[[variables[y]]],
+                    ymax = mean[[variables[y]]] + sem[[variables[y]]]),
+                width = 0.3,
+                size = 0.7)+
+  
+  scale_fill_manual(values = c(col1, col2, col3))+
+  
+    labs(title = paste(variables[y], ' x ', variables[x]),
+         y = paste(variables[y], ' ', units[1,variables[y]]),
+         x = paste(variables[x]),
+         fill = 'Legend')+
+  
+  theme(title = element_text(size=16, face = 'bold'),
+        axis.title.x = element_text(size=16), 
+        axis.text.x = element_text(size=16),
+        axis.title.y = element_text(size=16), 
+        axis.text.y = element_text(size=16),
+        legend.text = element_text(size=12), 
+        legend.title = element_text(size=14))+
+  
+theme_bw()
+```
+
+# 9 *Statistics with Groups*
+
+## 9.1 *Meet Assumptions of ANOVA*
+
+Before performing ANOVA, we need to check if the data meets the assumptions required for ANOVA, such as normality and homogeneity of variances.
+
+### 9.1.1 *Normality Test*
+
+The Shapiro-Wilk test is used to assess whether the data follows a normal distribution. A p-value greater than 0.05 indicates that the data is normally distributed.
+
+```{r}
+shapiro_summary <- list()
+
+for (variable in 5:length(variables)){
+  
+  # skip columns with NAs
+  if (is.na(data_clean[1 , variables[variable]])){
+    next
+  }
+  
+  print(variables[variable])
+  
+  shapiro <- shapiro.test(data_clean[[variables[variable]]])
+  
+  shapiro_summary[[variables[variable]]] <- shapiro
+  
+}
+```
+
+### 9.1.2 *Homogeneity of Variance Test*
+
+Levene's test is used to assess whether the variances across groups are equal. A p-value greater than 0.05 indicates that the variances are homogeneous.
+
+```{r}
+levene_summary <- list()
+
+for (variable in 5:length(variables)){
+  
+  # skip columns with NAs
+  if (is.na(data_clean[1 , variables[variable]])){
+    next
+  }
+  
+  print(variables[variable])
+
+  levene <- leveneTest(data_clean[[variables[variable]]] ~ data_clean[[x]])
+
+  levene_summary[[variables[variable]]] <- levene
+
+}
+```
+
+## 9.2 *ANOVA*
+
+Checks variation between the group means, then compares it to the variation within each group and if the between-group differences are much bigger than the normal variation within groups, then the groups are truly different. Simply, ANOVA tests whether the differences between the group averages are bigger than what we’d expect from random noise alone.
+
+-   p \< 0.05 → “significant difference”
+
+```{r}
+# example by hand
+#anova <- aov(Pmic~Depth, data = data_clean)
+#summary(anova)
+
+anova_summary <- list()
+anova_model <- list()
+
+# loop through all variables against Depth
+for (variable in 5:length(variables)){
+
+  # skip columns with NAs
+  if (is.na(data_clean[1 , variables[variable]])){
+    next
+  }
+  
+  print(paste('ANOVA performed for:', variables[variable]))
+  
+  anova <- aov(data_clean[[variables[variable]]] ~ data_clean[[variables[x]]])
+
+  anova_summary[[variables[variable]]] <- summary(anova)
+  anova_model[[variables[variable]]] <- anova
+
+}
+
+```
+
+You can access the results for each variable by calling the respective list element.
+
+```{r}
+print(anova_list[['Pmic']])
+```
+
+## 9.3 *Tukey's HSD*
+
+Tukey's Honest Significant Difference test is a post-hoc test used after ANOVA to find out which specific groups' means (compared with each other) are different.
+
+```{r}
+# example by hand
+#tukey <- TukeyHSD(anova)
+#print(tukey)
+
+anova_variables <- names(anova_summary)
+tukey_summary <- list()
+
+for (variable in 1:length(anova_list)){
+  
+  tukey <- TukeyHSD(anova_model[[variable]])
+  
+  tukey_summary[[anova_variables[(variable)]]] <- tukey
+  
+}
+```
+
+You can access the results for each variable by calling the respective list element.
+
+```{r}
+print(tukey_summary[['Pmic']])
+```
+
+## 9.4 *Special Case - PERMANOVA*
+
+Multivariate ANOVA (MANOVA) is an extension of ANOVA that allows for the analysis of multiple dependent variables simultaneously. It assesses whether the mean vectors of the dependent variables differ across groups defined by one or more independent variables.
+
+```{r}
+#install.packages("devtools")
+#install.packages("cli")
+#devtools::install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
+```
+
+```{r}
+library(vegan)
+library(pairwiseAdonis)
+adonis2(data_clean[,34:41] ~ Depth, 
+        data = data_clean, 
+        permutations = 9999, 
+        method = "euclidean")
+pairwise.adonis2(data_clean[,5:ncol(data_clean)] ~ Horizon,
+                 data = data_clean,
+                 method = "euclidean",
+                 perm = 9999,
+                 p.adjust.m = "fdr")
+```
+
+```{r}
+#install.packages("devtools")
+#install.packages("cli")
+#devtools::install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
+```
+
+```{r}
+# manova <- manova(cbind(data_clean$`Olsen_P_[DIP]`, data_clean$Soil_TIP, data_clean$Soil_TOP, data_clean$Soil_TP, data_clean$Pmic, data_clean$`DIP/TP`, data_clean$`Pmic/TP`, data_clean$`TOP/TP`) ~ data_clean$Depth)
+# summary.aov(manova)
+```
+
+# 10 *Linear Regression Graphical*
+
 ```{r}
 ggplot(data_clean, aes(x = data_clean[,z], y = data_clean[,y]))+
   geom_point(size=4, aes(colour = data_clean[,x])) +
@@ -208,17 +465,18 @@ ggplot(data_clean, aes(x = data_clean[,z], y = data_clean[,y]))+
   scale_y_continuous(name = "Pmic")
 ```
 
-## Linear Regression Statistical
+# 11 *Linear Regression Statistics*
 
 ```{r}
 linear_reg <- lm(data_clean[,y]~data_clean[,z])
 summary(linear_reg)
 ```
 
-## Correlation Plot
+# 12 *Special Cases (Multiple Predictors)*
+
+# 13 *Correlation Plot*
 
 ```{r}
 ggpairs(data_clean, columns = 34:41, title = "correlations", aes(colour = Depth))+
   theme_bw(base_size = 8)
 ```
-
