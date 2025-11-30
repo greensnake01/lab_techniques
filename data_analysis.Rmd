@@ -132,17 +132,22 @@ print(variables)
 For example, for the x-axis we would like 'pH' and for the y axis, 'TP': x = 'pH' and y = 'TP'.
 
 ```{r}
-x = 4
+x = 35 # 4 for Depth, 35 for Soil_TP, 38 for Pmic
 y = 38
-z = 35
-w = 1
-q = 1
 fill = 4
-colour = 1
 
 col1 = '#5e3023'
 col2 = '#c08552'
 col3 = '#f3e9dc'
+
+# similar possible combinations
+# horizon_colors_3 <- c("Topsoil"        = "#1F1209",
+#                       "Upper subsoil"  = "#8B4513",   
+#                       "Lower subsoil"  = "#CD853F") 
+# 
+# horizon_colors_modern <- c("Topsoil"        = "#2E1503",
+#                            "Upper subsoil"  = "#994F00",
+#                            "Lower subsoil"  = "#D88C00")
 ```
 
 # 6 *Box Plots*
@@ -160,20 +165,20 @@ ggplot(data_clean, aes(.data[[variables[x]]],
   
   scale_fill_manual(values = c(col1, col2, col3))+
   
-    labs(title = paste(variables[y], ' x ', variables[x]),
-         y = paste(variables[y], ' ', units[1,variables[y]]),
+    labs(title = paste(gsub('_', ' ', variables[y]), ' x ', variables[x]),
+         y = paste(gsub('_', ' ', variables[y]), ' ', units[1, variables[y]]),
          x = paste(variables[x]),
          fill = 'Legend')+
   
-  theme(plot.title = element_text(size=16, face = 'bold'),
-        axis.title.x = element_text(size=16), 
-        axis.text.x = element_text(size=16),
-        axis.title.y = element_text(size=16), 
-        axis.text.y = element_text(size=16),
-        legend.text = element_text(size=12), 
-        legend.title = element_text(size=14))+
+  theme_bw()+
   
-  theme_bw()
+    theme(plot.title = element_text(size=18, face = 'bold'),
+        axis.title.x = element_text(size=16, colour = 'black'), 
+        axis.text.x = element_text(size=14, colour = 'black'),
+        axis.title.y = element_text(size=16, colour = 'black'), 
+        axis.text.y = element_text(size=14, colour = 'black'),
+        legend.text = element_text(size=12), 
+        legend.title = element_text(size=14))
 ```
 
 # 7 *Calculate Means, SDs, SEMs*
@@ -254,19 +259,19 @@ ggplot(mean, aes(.data[[variables[x]]],
   scale_fill_manual(values = c(col1, col2, col3))+
   
     labs(title = paste(variables[y], ' x ', variables[x]),
-         y = paste(variables[y], ' ', units[1,variables[y]]),
+         y = paste(variables[y], ' ', units[1, variables[y]]),
          x = paste(variables[x]),
          fill = 'Legend')+
   
-  theme(title = element_text(size=16, face = 'bold'),
-        axis.title.x = element_text(size=16), 
-        axis.text.x = element_text(size=16),
-        axis.title.y = element_text(size=16), 
-        axis.text.y = element_text(size=16),
-        legend.text = element_text(size=12), 
-        legend.title = element_text(size=14))+
+  theme_bw()+
   
-theme_bw()
+    theme(plot.title = element_text(size=18, face = 'bold'),
+        axis.title.x = element_text(size=16, colour = 'black'), 
+        axis.text.x = element_text(size=14, colour = 'black'),
+        axis.title.y = element_text(size=16, colour = 'black'), 
+        axis.text.y = element_text(size=14, colour = 'black'),
+        legend.text = element_text(size=12), 
+        legend.title = element_text(size=14))
 ```
 
 ## 8.2 *SEM*
@@ -286,20 +291,20 @@ ggplot(mean, aes(.data[[variables[x]]],
   
   scale_fill_manual(values = c(col1, col2, col3))+
   
-    labs(title = paste(variables[y], ' x ', variables[x]),
-         y = paste(variables[y], ' ', units[1,variables[y]]),
+    labs(title = paste(gsub('_', ' ', variables[y]), ' x ', variables[x]),
+         y = paste(gsub('_', ' ', variables[y]), ' ', units[1,variables[y]]),
          x = paste(variables[x]),
          fill = 'Legend')+
   
-  theme(title = element_text(size=16, face = 'bold'),
-        axis.title.x = element_text(size=16), 
-        axis.text.x = element_text(size=16),
-        axis.title.y = element_text(size=16), 
-        axis.text.y = element_text(size=16),
-        legend.text = element_text(size=12), 
-        legend.title = element_text(size=14))+
+  theme_bw()+
   
-theme_bw()
+    theme(plot.title = element_text(size=18, face = 'bold'),
+        axis.title.x = element_text(size=16, colour = 'black'), 
+        axis.text.x = element_text(size=14, colour = 'black'),
+        axis.title.y = element_text(size=16, colour = 'black'), 
+        axis.text.y = element_text(size=14, colour = 'black'),
+        legend.text = element_text(size=12), 
+        legend.title = element_text(size=14))
 ```
 
 # 9 *Statistics with Groups*
@@ -328,6 +333,8 @@ for (variable in 5:length(variables)){
   
   shapiro_summary[[variables[variable]]] <- shapiro
   
+  print(paste('Shapiro-Wilk Test performed for:', variables[variable]))
+  
 }
 ```
 
@@ -350,6 +357,8 @@ for (variable in 5:length(variables)){
   levene <- leveneTest(data_clean[[variables[variable]]] ~ data_clean[[x]])
 
   levene_summary[[variables[variable]]] <- levene
+  
+  print(paste("Levene's", 'Test performed for:', variables[variable]))
 
 }
 ```
@@ -362,8 +371,8 @@ Checks variation between the group means, then compares it to the variation with
 
 ```{r}
 # example by hand
-#anova <- aov(Pmic~Depth, data = data_clean)
-#summary(anova)
+# anova <- aov(Pmic~Depth, data = data_clean)
+# summary(anova)
 
 anova_summary <- list()
 anova_model <- list()
@@ -376,21 +385,20 @@ for (variable in 5:length(variables)){
     next
   }
   
-  print(paste('ANOVA performed for:', variables[variable]))
-  
   anova <- aov(data_clean[[variables[variable]]] ~ data_clean[[variables[x]]])
 
   anova_summary[[variables[variable]]] <- summary(anova)
   anova_model[[variables[variable]]] <- anova
-
+  
+  print(paste('ANOVA performed for:', variables[variable]))
 }
-
 ```
 
 You can access the results for each variable by calling the respective list element.
 
 ```{r}
-print(anova_list[['Pmic']])
+print(paste('Variable:', variables[y]))
+print(anova_summary[[variables[y]]])
 ```
 
 ## 9.3 *Tukey's HSD*
@@ -399,8 +407,8 @@ Tukey's Honest Significant Difference test is a post-hoc test used after ANOVA t
 
 ```{r}
 # example by hand
-#tukey <- TukeyHSD(anova)
-#print(tukey)
+# tukey <- TukeyHSD(anova)
+# print(tukey)
 
 anova_variables <- names(anova_summary)
 tukey_summary <- list()
@@ -408,8 +416,10 @@ tukey_summary <- list()
 for (variable in 1:length(anova_list)){
   
   tukey <- TukeyHSD(anova_model[[variable]])
+
+  tukey_summary[[anova_variables[variable]]] <- tukey
   
-  tukey_summary[[anova_variables[(variable)]]] <- tukey
+  print(paste("Tukey's HSD", 'performed for:', variables[variable]))
   
 }
 ```
@@ -417,17 +427,18 @@ for (variable in 1:length(anova_list)){
 You can access the results for each variable by calling the respective list element.
 
 ```{r}
-print(tukey_summary[['Pmic']])
+print(paste('Variable:', variables[y]))
+print(tukey_summary[[variables[y]]])
 ```
 
-## 9.4 *Special Case - PERMANOVA*
+## ---9.4 *Special Case - PERMANOVA - not used*
 
 Multivariate ANOVA (MANOVA) is an extension of ANOVA that allows for the analysis of multiple dependent variables simultaneously. It assesses whether the mean vectors of the dependent variables differ across groups defined by one or more independent variables.
 
 ```{r}
-#install.packages("devtools")
-#install.packages("cli")
-#devtools::install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
+# install.packages("devtools")
+# install.packages("cli")
+# devtools::install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
 ```
 
 ```{r}
@@ -437,6 +448,7 @@ adonis2(data_clean[,34:41] ~ Depth,
         data = data_clean, 
         permutations = 9999, 
         method = "euclidean")
+
 pairwise.adonis2(data_clean[,5:ncol(data_clean)] ~ Horizon,
                  data = data_clean,
                  method = "euclidean",
@@ -445,9 +457,9 @@ pairwise.adonis2(data_clean[,5:ncol(data_clean)] ~ Horizon,
 ```
 
 ```{r}
-#install.packages("devtools")
-#install.packages("cli")
-#devtools::install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
+# install.packages("devtools")
+# install.packages("cli")
+# devtools::install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
 ```
 
 ```{r}
@@ -455,28 +467,178 @@ pairwise.adonis2(data_clean[,5:ncol(data_clean)] ~ Horizon,
 # summary.aov(manova)
 ```
 
-# 10 *Linear Regression Graphical*
+# 10 *Correlation Plots - P-Group*
+
+Correlation plots are useful to visualize the relationships between multiple variables simultaneously.
+
+## 10.1 *General*
+
+Depicts one, general trend line and correlation.
 
 ```{r}
-ggplot(data_clean, aes(x = data_clean[,z], y = data_clean[,y]))+
-  geom_point(size=4, aes(colour = data_clean[,x])) +
-  geom_smooth(method = "lm")  +
-  scale_x_continuous (name = "TP") +
-  scale_y_continuous(name = "Pmic")
-```
-
-# 11 *Linear Regression Statistics*
-
-```{r}
-linear_reg <- lm(data_clean[,y]~data_clean[,z])
-summary(linear_reg)
-```
-
-# 12 *Special Cases (Multiple Predictors)*
-
-# 13 *Correlation Plot*
-
-```{r}
-ggpairs(data_clean, columns = 34:41, title = "correlations", aes(colour = Depth))+
+ggpairs(data_clean, 
+        columns = 34:41, 
+        title = "Correlations P-Group", 
+        upper = list(continuous = wrap("cor", size = 2.5)),
+        lower = list(continuous = "smooth"))+
+  
   theme_bw(base_size = 8)
 ```
+
+## 10.2 *Within Layers*
+
+Shows correlations and trendlines within layers A, B and C.
+
+```{r}
+ggpairs(data_clean, 
+        columns = 34:41, 
+        title = "Correlations P-Group", 
+        upper = list(continuous = wrap("cor", size = 2.5)),
+        lower = list(continuous = "smooth"),
+        aes(colour = Depth))+
+  
+  theme_bw(base_size = 8)
+  
+  #scale_colour_manual(values = c(col1, col2, col3))+
+  #scale_colour_manual(values = c(col1, col2, col3))
+```
+
+# 11 *OLS Regression Graphical*
+
+Ordinary Least Squares (OLS) regression is a statistical method, it is used to model the relationship between a dependent variable and one or more independent variables by minimizing the sum of the squared differences between observed values of continuous data.
+
+## 11.1 *General*
+
+Depicts one, general trend line.
+
+```{r}
+ggplot(data_clean, aes(x = data_clean[[z]], 
+                       y = data_clean[[y]]))+
+                       #colour = data_clean[[x]], # within layers A, B and C
+                       #))+
+  geom_point(size = 3, aes(colour = data_clean[[x]],
+                           shape = data_clean[[x]]))+ # general pattern
+  
+  geom_smooth(method = "lm", colour = 'black', alpha = 0.1)+
+  
+  scale_colour_manual(values = c(col1, col2, col3))+
+  scale_shape_manual(values = c("A" = 16, "B" = 17, "C" = 15))+
+  
+      labs(title = paste(gsub('_', ' ', variables[y]), ' x ', gsub('_', ' ', variables[x])),
+           y = paste(gsub('_', ' ', variables[y]), ' ', units[1, variables[y]]),
+           x = paste(gsub('_', ' ', variables[x]), ' ', units[1, variables[x]]),
+           colour = 'Legend',
+           shape = 'Legend')+
+  
+  theme_bw()+
+  
+    theme(plot.title = element_text(size=18, face = 'bold'),
+        axis.title.x = element_text(size=16, colour = 'black'), 
+        axis.text.x = element_text(size=14, colour = 'black'),
+        axis.title.y = element_text(size=16, colour = 'black'), 
+        axis.text.y = element_text(size=14, colour = 'black'),
+        legend.text = element_text(size=12), 
+        legend.title = element_text(size=14))
+```
+
+## 11.2 *Within Layers*
+
+Depicts multiple trend lines for each layer A, B and C.
+
+```{r}
+ggplot(data_clean, aes(x = data_clean[[z]], 
+                       y = data_clean[[y]],
+                       colour = data_clean[[x]], # within layers A, B and C
+                       fill = data_clean[[x]],
+                       ))+
+  
+  geom_point(size = 4, aes(shape = data_clean[[x]]), colour = 'black')+
+  geom_point(size = 3, aes(shape = data_clean[[x]]))+
+  
+  geom_smooth(method = "lm",
+              size = 1.2,
+              colour = "black") +
+  
+  geom_smooth(method = "lm", 
+              alpha = 0.1,
+              size = 0.8)+
+  
+  scale_colour_manual(values = c(col1, col2, col3))+
+  scale_fill_manual(values = c(col1, col2, col3))+
+  scale_shape_manual(values = c("A" = 16, "B" = 17, "C" = 15))+
+  
+      labs(title = paste(gsub('_', ' ', variables[y]), ' x ', gsub('_', ' ', variables[])),
+           y = paste(gsub('_', ' ', variables[y]), ' ', units[1, variables[y]]),
+           x = paste(gsub('_', ' ', variables[x]), ' ', units[1, variables[x]]),
+           colour = 'Legend',
+           shape = 'Legend',
+           linetype = 'Legend',
+           fill = 'Legend')+
+  
+  theme_bw()+
+  
+    theme(plot.title = element_text(size=18, face = 'bold'),
+        axis.title.x = element_text(size=16, colour = 'black'), 
+        axis.text.x = element_text(size=14, colour = 'black'),
+        axis.title.y = element_text(size=16, colour = 'black'), 
+        axis.text.y = element_text(size=14, colour = 'black'),
+        legend.text = element_text(size=12), 
+        legend.title = element_text(size=14))
+```
+
+# 12 *OLS Regression Statistics*
+
+Ordinary Least Squares (OLS) regression is a statistical method used to model the relationship between a dependent variable and one or more independent variables by minimizing the sum of the squared differences between observed values.
+
+```{r}
+# example by hand
+# ols <- lm(data_clean[[y]]~data_clean[[x]])
+# summary(ols)
+
+ols_summary <- list()
+ols_model <- list()
+
+# loop through all variables against Depth
+for (variableX in 5:length(variables)){
+
+  # skip columns with NAs
+  if (is.na(data_clean[1 , variables[variableX]])){
+    next
+  }
+  
+  ols_summary[[variables[variableX]]] <- list()
+  ols_model[[variables[variableX]]] <- list()
+  
+  for (variableY in 5:length(variables)){
+    # skip columns with NAs
+    if (is.na(data_clean[1 , variables[variableY]]) | variableX == variableY ){
+      next
+    }
+    
+    ols <- lm(data_clean[[variables[variableY]]] ~ data_clean[[variables[variableX]]])
+    
+    ols_summary[[variables[variableX]]][[variables[variableY]]] <- summary(ols)
+    ols_model[[variables[variableX]]][[variables[variableY]]] <- ols
+  }
+  print(paste('OLS Regression performed for:', variables[variableX]))
+}
+```
+
+You can access the results for each variable by calling the respective list element.
+
+```{r}
+print(paste('Variable Y:', variables[y], 'Variable X:', variables[x]))
+print(ols_summary[[variables[x]]][[variables[y]]])
+```
+
+# ---13 *Special Cases (Multiple Predictors)*
+
+Multiple predictors can be included in the model to account for additional sources of variation.
+
+# ---14 *LMM Regression - not used*
+
+Linear Mixed Models (LMM) are an extension of linear models that allow for the inclusion of both fixed and random effects. They are particularly useful when dealing with hierarchical or grouped data, where observations within the same group may be correlated.
+
+# ---15 *Automated Plotting and Saving*
+
+# ---16 *?Data Transformation?* 
