@@ -1,0 +1,1043 @@
+
+#title: Ecosystems and Biogeochemistry Laboratory - Techniques in Terrestrial Ecosystem Ecology
+  
+#Clean environment: ----
+  
+rm(list = ls())
+
+#=========================#
+# !!! *Important Note* !!!# ----
+#=========================#
+
+#Saving - Writing and Plotting ----
+  
+#Run the first code cell to get your working directory
+
+getwd()
+
+#Make a folder for saving items. Inside the folder, create subfolders: Bar Plots, Box Plots, Correlations,; Distribution, OLS.
+
+#Insert into the "path" variable instructions (file path) navigating from your current working directory into the desired folder. Always make sure that you adjust the file path to save the data in a desired folder. '..'/ refers to one folder up, '../../' refers to two folders up, etc. Save the file excel file.
+
+path <- "../../"
+
+# 0 *Rmarkdown Notebooks*
+
+#Rmarkdown is a format which combines cells of text (markdown) and code (R). This format allows the sure to run the cells in any order, however to access the results, chronological order is maintained. When you execute code within the notebook, the results appear beneath the code.
+
+#Try executing this chunk below by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*.
+
+plot(cars)
+
+#Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+#When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+# 1 Research Question/-s ----
+
+#Main: What is the effect of the soil depth on the data?
+  
+#Sub: Does the biogeochemical composition of the individual layers differ? If yes, in what way? What might the results suggest?
+  
+# 2 Load Packages ----
+  
+#Load the packages below by executing the code chunk. If the packages are not installed yet, install them first using the following format: install.packages("package_name"). The code below should automatically check for the packages and install them if they are missing, restarting R multiple times to install/update each package might be necessary.
+
+#The package *ggplot2* serves for plotting.
+
+if(!require(ggplot2)){
+  install.packages('ggplot2')
+  library(ggplot2)
+}
+
+#The package *tidyverse* serves as an alternative to data handling.
+
+if(!require(tidyverse)){
+  install.packages('tidyvers')
+  library(tidyverse)
+}
+
+#The package *car* serves for Levene's test of homogeneity of variances.
+
+if(!require(car)){
+    install.packages('car')
+    library(car)
+}
+
+#The package *GGally* serves for correlation plots.
+
+if(!require(GGally)){
+    install.packages('GGally')
+    library(GGally)
+}
+
+
+#The package *lme4* serves for Linear Mixed Models (LMMs).
+
+if(!require(lme4)){
+    install.packages('lme4')
+    library(lme4)
+}
+
+
+#The package *cowplot* serves for plotting of multiple graphs.
+
+if(!require(cowplot)){
+    install.packages('cowplot')
+    library(cowplot)
+}
+
+#The package *ggeffects* serves for plotting models.
+
+if(!require(ggeffects)){
+    install.packages('ggeffects')
+    library(ggeffects)
+}
+
+#The package *openxlsx* serves for writing data into excel files.
+
+if(!require(openxlsx)){
+    install.packages('openxlsx')
+    library(openxlsx)
+}
+
+# 3 Load Data ----
+
+#To access the mastersheet data, please use the 2nd cell below (uncomment and run) and skip the 1st cell completely.
+
+data <- read.csv('../../Data/_EcoLab 2025 Mastersheet.xlsx - Mastersheet.csv', sep = ',')
+
+#data <- read.csv('../../data/EcoLab 2025 Mastersheet.csv', sep = ',')
+
+# or
+#data <- read.csv(file.choose(), sep = ',')
+
+
+# 4 Clean Data ----
+
+data_clean <- data[, 1:(length(data)-3)] # create a copy with all necessary columns
+
+colnames(data_clean) <- data[3, 1:(length(data)-3)] # use the values in the 3rd row as the column names
+
+# remove second pH column:
+data_clean <- data_clean[, -8]
+
+colnames(data_clean) <- gsub(' ', '_', colnames(data_clean)) # change space to '_'
+
+# fix column name issues:
+colnames(data_clean)[colnames(data_clean) == 'phoD_'] <- 'phoD'
+colnames(data_clean)[colnames(data_clean) == 'DOC_'] <- 'DOC'
+colnames(data_clean)[colnames(data_clean) == 'TDN_'] <- 'TDN'
+
+data_clean <- data_clean[5:19,] # keep only rows 5 to 19
+
+rownames(data_clean) <- seq(1,15,1) # reset the row names to become 1 to 15 
+
+# correction of value types
+data_clean[colnames(data_clean) == 'Plot'] <- lapply(data_clean[colnames(data_clean) == 'Plot'], as.numeric)
+data_clean[, 5:length(data_clean)] <- lapply(data_clean[, 5:length(data_clean)], as.numeric)
+
+data_clean$Sample_ID <- factor(data_clean$Sample_ID)
+data_clean$Horizon <- factor(data_clean$Horizon, levels = c('mineral topsoil', 'upper subsoil', 'lower subsoil'))
+data_clean$Depth <- factor(data_clean$Depth, levels = c('A', 'B', 'C'))
+
+#if necessary, uncomment the comment below and run
+#data_clean[20,] <- data[4,] # add the units into the last row 
+
+str(data_clean) # print the value types
+
+
+
+units <- data[4, 1:length(data_clean)] # add the units into the last row of an object storing units
+
+colnames(units) <- data[3, 1:length(data_clean)] # use the values in the 3rd row as the column names
+
+colnames(units) <- gsub(' ', '_', colnames(units)) # change space to '_'
+
+units # print output
+
+
+# 5 Log Transformed Data ----
+
+#Log-transform data to achieve normality for statistical tests.
+
+data_clean_log <- data_clean
+
+for (column in 8:ncol(data_clean)) {
+
+  x <- data_clean[[column]]
+  
+  if (!is.numeric(x)) next
+
+  if (all(is.na(x))) next
+  
+  if (all(x <= 0, na.rm = TRUE)) next
+  
+  data_clean_log[[column]] <- log(x)
+}
+data_clean_log
+
+
+# 6 Variables of Interest ----
+
+#Before proceeding with plotting, define the variables from the list first.
+
+variables = colnames(data_clean)
+print(variables)
+
+#For example, for the x-axis we would like 'pH' and for the y axis, 'TP': x = 'pH' and y = 'TP'.
+
+x = 4 # 4 for Depth, 31 for Soil_TP, 34 for Pmic, 7 for pH
+y = 34
+
+# one predictor
+z = 31 # variable "X" for OLS regressions
+
+# more predictors
+w = 7  # 2nd variable for multiple predictors in OLS regressions
+q = 47 # 3rd variable
+
+fill = x # variable for filling colors in box plots and bar plots
+
+col1 = '#5e3023'
+col2 = '#c08552'
+col3 = '#f3e9dc'
+
+# similar possible combinations
+# horizon_colors_3 <- c("Topsoil"        = "#1F1209",
+#                       "Upper subsoil"  = "#8B4513",   
+#                       "Lower subsoil"  = "#CD853F") 
+# 
+# horizon_colors_modern <- c("Topsoil"        = "#2E1503",
+#                            "Upper subsoil"  = "#994F00",
+#                            "Lower subsoil"  = "#D88C00")
+
+
+# 7 Data Distribution ----
+
+distribution_plots <- list()
+
+for (variableX in c(26:28,30:37)){ # from cellulase to TOP/TP
+  # aes(sample = for qq-plot; x = for histogram)
+  plot <- ggplot(data_clean, aes(sample = .data[[variables[variableX]]]))+
+    #geom_histogram(bins = 5)+
+    stat_qq()+
+    stat_qq_line()+
+    theme_bw()
+  
+  distribution_plots[[variables[variableX]]] <- plot
+}
+
+plot_grid(plotlist = distribution_plots)
+
+### 7.1 Saving ----
+
+for (plot in names(distribution_plots)){
+  plot_name <- gsub("[/\\?<>\\:*|\"]", "_", plot)
+  ggsave(filename = paste0(path, "Figures/Distribution/distribution_", plot_name, ".pdf", sep = ""),
+         plot = distribution_plots[[plot]])
+}
+
+# 8 Box Plots ----
+
+#Box plots are suitable for showing medians (better, when distribution is skewed) together with minimum, maximum values and outliers, as well as the position of 50% of the data.
+
+box <- ggplot(data_clean, aes(.data[[variables[x]]],
+                              .data[[variables[y]]], 
+                              fill = .data[[variables[fill]]]))+
+  
+  geom_boxplot(width = 0.5, 
+               lwd = 0.5,
+               colour = 'black')+
+  
+  scale_fill_manual(values = c(col1, col2, col3))+
+  
+  labs(title = paste(gsub('_', ' ', variables[y]), ' x ', variables[x]),
+       y = paste(gsub('_', ' ', variables[y]), ' ', units[1, variables[y]]),
+       x = paste(variables[x]),
+       fill = 'Legend')+
+  
+  theme_bw()+
+  
+  theme(plot.title = element_text(size=18, face = 'bold'),
+        axis.title.x = element_text(size=16, colour = 'black'), 
+        axis.text.x = element_text(size=14, colour = 'black'),
+        axis.title.y = element_text(size=16, colour = 'black'), 
+        axis.text.y = element_text(size=14, colour = 'black'),
+        legend.text = element_text(size=12), 
+        legend.title = element_text(size=14))
+
+box
+
+## 8.1 Automatic Plotting ----
+
+box_plots <- list()
+for (variable in 7:length(variables)){
+  
+  if (is.na(data_clean[1 , variables[variable]])){
+    next
+  }
+  
+  boxplot <- ggplot(data_clean, aes(.data[[variables[x]]],
+                                    .data[[variables[variable]]], 
+                                    fill = .data[[variables[fill]]]))+
+    
+    geom_boxplot(width = 0.5, 
+                 lwd = 0.5,
+                 colour = 'black')+
+    
+    scale_fill_manual(values = c(col1, col2, col3))+
+    
+    labs(title = paste(gsub('_', ' ', variables[variable]), ' x ', variables[x]),
+         y = paste(gsub('_', ' ', variables[variable]), ' ', units[1, variables[variable]]),
+         x = paste(variables[x]),
+         fill = 'Legend')+
+    
+    theme_bw()+
+    
+    theme(plot.title = element_text(size=18, face = 'bold'),
+          axis.title.x = element_text(size=16, colour = 'black'), 
+          axis.text.x = element_text(size=14, colour = 'black'),
+          axis.title.y = element_text(size=16, colour = 'black'), 
+          axis.text.y = element_text(size=14, colour = 'black'),
+          legend.text = element_text(size=12), 
+          legend.title = element_text(size=14))
+  
+  box_plots[[variables[variable]]] <- boxplot
+}
+
+### 8.1.1 Saving ----
+
+for (plot in names(box_plots)){
+  plot_name <- gsub("[/\\?<>\\:*|\"]", "_", plot)
+  ggsave(filename = paste0(path, "Figures/Box Plots/boxplot_", plot_name, ".pdf", sep = ""),
+         plot = box_plots[[plot]])
+}
+
+# 9 Calculate Means, SDs, SEMs ----
+
+#Calculations of means, standard deviations and standard error means of variables.
+
+#!!! To get means for column plots, set variable x to 4 (Depth variable). !!!
+  
+# calculation of means per one variable
+# mean <- data_clean %>%
+#   group_by(.data[[variables[x]]]) %>%
+#   summarise(mean = mean(.data[[variables[y]]])) %>%
+#   rename(!!paste(variables[y]) := mean)
+
+# calculation of means for all variables
+mean <- data.frame(Depth = c('A', 'B', 'C'))
+sd <- data.frame(Depth = c('A', 'B', 'C'))
+sem <- data.frame(Depth = c('A', 'B', 'C'))
+
+for (variable in 5:length(variables)){
+  
+  if (is.na(data_clean[1 , variables[variable]])){
+    next
+  }
+  
+  mean_results <- data_clean %>%
+    group_by(.data[[variables[x]]]) %>%
+    summarise(mean = mean(.data[[variables[variable]]], na.rm = T)) %>%
+    rename(!!paste(variables[variable]) := mean)
+  
+  mean[, variables[variable]] <- mean_results[, 2]
+  
+  
+  sd_results <- data_clean %>%
+    group_by(.data[[variables[x]]]) %>%
+    summarise(sd = sd(.data[[variables[variable]]], na.rm = T)) %>%
+    rename(!!paste(variables[variable]) := sd)
+  
+  sd[, variables[variable]] <- sd_results[, 2]
+  
+  sem_results <- data_clean %>%
+    group_by(.data[[variables[x]]]) %>%
+    summarise(sem = sd(.data[[variables[variable]]], na.rm = T)) %>%
+    rename(!!paste(variables[variable]) := sem)
+  
+  sem[, variables[variable]] <- sem_results[, 2]
+}
+
+sample_size <- data_clean %>% group_by(Depth) %>% summarise(n = n()) %>% pull(n)
+
+if (sample_size[1] == sample_size[2] & sample_size[2] == sample_size[3]){
+  print('Equal sample sizes across groups')
+  sample_size <- sample_size[1]
+} else {
+  print('Unequal sample sizes across groups')
+}
+
+for (r in 1:nrow(sem)){
+  for (c in 2:ncol(sem)){
+    sem[r, c] <- sem[r, c] / sqrt(sample_size)
+  }
+}
+
+print(mean)
+print(sd)
+print(sem)
+
+#Merge into one dataframe.
+
+summary_data <- mean
+summary_data[paste0(colnames(mean)[-1], "_sd")]  <- sd[colnames(mean)[-1]]
+summary_data[paste0(colnames(mean)[-1], "_sem")] <- sem[colnames(mean)[-1]]
+
+## 9.1 Saving ----
+
+write.xlsx(mean, file = paste0(path, 'Data/means.csv'), sheetName = "means", rowNames = F, overwrite = T)
+write.xlsx(sd, file = paste0(path, 'Data/sd.csv'), sheetName = "sd", rowNames = F, overwrite = T)
+write.xlsx(sem, file = paste0(path, 'Data/sem.csv'), sheetName = "sem", rowNames = F, overwrite = T)
+write.xlsx(summary_data, file = paste0(path, 'Data/summary_data.csv'), sheetName = "summary_data", rowNames = F, overwrite = T)
+
+# 10 Bar Plots ----
+
+#Bar plots are suitable for showing averages together with standard deviation or standard error mean depicted as whiskers, e.g. average concentrations of TP, etc.
+
+## 10.1 SD ----
+
+#If average is 7 and SD is 2, SD shows the variation, the range within which all values are found. In this case, we could expect that most values fall between 5 and 9 (7 ± 2). Used to show biological/real variation.
+
+bar <- ggplot(mean, aes(.data[[variables[x]]], 
+                        .data[[variables[y]]],
+                        fill = .data[[variables[fill]]]))+
+  geom_col()+
+  
+  geom_errorbar(aes(ymin = mean[[variables[y]]] - sd[[variables[y]]],
+                    ymax = mean[[variables[y]]] + sd[[variables[y]]]),
+                width = 0.3,
+                size = 0.7)+
+  
+  scale_fill_manual(values = c(col1, col2, col3))+
+  
+  labs(title = paste(variables[y], ' x ', variables[x]),
+       y = paste(variables[y], ' ', units[1, variables[y]]),
+       x = paste(variables[x]),
+       fill = 'Legend')+
+  
+  theme_bw()+
+  
+  theme(plot.title = element_text(size=18, face = 'bold'),
+        axis.title.x = element_text(size=16, colour = 'black'), 
+        axis.text.x = element_text(size=14, colour = 'black'),
+        axis.title.y = element_text(size=16, colour = 'black'), 
+        axis.text.y = element_text(size=14, colour = 'black'),
+        legend.text = element_text(size=12), 
+        legend.title = element_text(size=14))
+
+bar
+
+## 10.2 SEM ----
+
+#If average is 7 and SEM is 0.5, SEM tells us what values we could expect if we repeated the measurements again. In this case, we could expect that most likely the average would fall between 6.5 and 7.5 (7 ± 0.5). Used to show how confident we are in the mean.
+
+bar_sem <- ggplot(mean, aes(.data[[variables[x]]], 
+                            .data[[variables[y]]],
+                            fill = .data[[variables[fill]]]))+
+  geom_col()+
+  
+  geom_errorbar(aes(ymin = mean[[variables[y]]] - sem[[variables[y]]],
+                    ymax = mean[[variables[y]]] + sem[[variables[y]]]),
+                width = 0.3,
+                size = 0.7)+
+  
+  scale_fill_manual(values = c(col1, col2, col3))+
+  
+  labs(title = paste(gsub('_', ' ', variables[y]), ' x ', variables[x]),
+       y = paste(gsub('_', ' ', variables[y]), ' ', units[1,variables[y]]),
+       x = paste(variables[x]),
+       fill = 'Legend')+
+  
+  theme_bw()+
+  
+  theme(plot.title = element_text(size=18, face = 'bold'),
+        axis.title.x = element_text(size=16, colour = 'black'), 
+        axis.text.x = element_text(size=14, colour = 'black'),
+        axis.title.y = element_text(size=16, colour = 'black'), 
+        axis.text.y = element_text(size=14, colour = 'black'),
+        legend.text = element_text(size=12), 
+        legend.title = element_text(size=14))
+
+bar_sem
+
+### 10.1-2.1 Automatic Plotting ----
+
+summary_data <- summary_data %>%
+  bind_cols(sem %>% select(ends_with("_sem")))
+
+bar_plots_sd <- list()
+bar_plots_sem <- list()
+for (variable in 7:length(variables)){
+  
+  if (is.na(data_clean[1 , variables[variable]])){
+    next
+  }
+  
+  barplot_sd <- ggplot(summary_data, aes(.data[[variables[x]]], 
+                                         .data[[variables[variable]]],
+                                         fill = .data[[variables[fill]]]))+
+    geom_col()+
+    
+    geom_errorbar(aes(ymin = .data[[variables[variable]]] - .data[[paste0(variables[variable], "_sd")]],
+                      ymax = .data[[variables[variable]]] + .data[[paste0(variables[variable], "_sd")]]),
+                  width = 0.3,
+                  size = 0.7)+
+    
+    scale_fill_manual(values = c(col1, col2, col3))+
+    
+    labs(title = paste(gsub('_', ' ', variables[variable]), ' x ', variables[x]),
+         y = paste(gsub('_', ' ', variables[variable]), ' ', units[1, variables[variable]]),
+         x = paste(variables[x]),
+         fill = 'Legend')+
+    
+    theme_bw()+
+    
+    theme(plot.title = element_text(size=18, face = 'bold'),
+          axis.title.x = element_text(size=16, colour = 'black'), 
+          axis.text.x = element_text(size=14, colour = 'black'),
+          axis.title.y = element_text(size=16, colour = 'black'), 
+          axis.text.y = element_text(size=14, colour = 'black'),
+          legend.text = element_text(size=12), 
+          legend.title = element_text(size=14))
+  
+  bar_plots_sd[[variables[variable]]] <- barplot_sd
+  
+  barplot_sem <- ggplot(summary_data, 
+                        aes(x = .data[[variables[x]]],
+                            y = .data[[variables[variable]]],
+                            fill = .data[[variables[fill]]])) +
+    geom_col() +
+    geom_errorbar(aes(ymin = .data[[variables[variable]]] - .data[[paste0(variables[variable], "_sem")]],
+                      ymax = .data[[variables[variable]]] + .data[[paste0(variables[variable], "_sem")]]),
+                  width = 0.3,
+                  size  = 0.7) +
+    scale_fill_manual(values = c(col1, col2, col3)) +
+    labs(title = paste(gsub('_', ' ', variables[variable]), '×', variables[x]),
+         y     = paste(gsub('_', ' ', variables[variable]), units[1, variables[variable]]),
+         x     = variables[x],
+         fill  = 'Legend') +
+    theme_bw() +
+    theme(plot.title      = element_text(size = 18, face = "bold"),
+          axis.title.x    = element_text(size = 16),
+          axis.text.x     = element_text(size = 14),
+          axis.title.y    = element_text(size = 16),
+          axis.text.y     = element_text(size = 14),
+          legend.text     = element_text(size = 12),
+          legend.title    = element_text(size = 14))
+  
+  bar_plots_sem[[variables[variable]]] <- barplot_sem
+}
+
+#### 10.1-2.1.1 Saving ----
+
+for (plot in names(bar_plots_sd)){
+  plot_name <- gsub("[/\\?<>\\:*|\"]", "_", plot)
+  ggsave(filename = paste0(path, "Figures/Bar Plots/barplot_sd_", plot_name, ".pdf", sep = ""),
+         plot = bar_plots_sd[[plot]])
+  
+  ggsave(filename = paste0(path, "Figures/Bar Plots/boxplot_sem_", plot_name, ".pdf", sep = ""),
+         plot = bar_plots_sem[[plot]])
+}
+
+# 11 Statistics with Groups ----
+
+## 11.1 Meet Assumptions of ANOVA ----
+
+#Before performing ANOVA, we need to check if the data meets the assumptions required for ANOVA, such as normality and homogeneity of variances.
+
+### 11.1.1 Normality Test ----
+
+#The Shapiro-Wilk test is used to assess whether the data follows a normal distribution. A p-value greater than 0.05 indicates that the data is normally distributed.
+
+shapiro_summary <- list()
+
+for (variable in 5:length(variables)){
+  
+  # skip columns with NAs
+  if (is.na(data_clean[1 , variables[variable]])){
+    next
+  }
+  
+  print(variables[variable])
+  
+  shapiro <- shapiro.test(data_clean[[variables[variable]]])
+  
+  shapiro_summary[[variables[variable]]] <- shapiro
+  
+  print(paste('Shapiro-Wilk Test performed for:', variables[variable]))
+  
+}
+
+### 11.1.2 Homogeneity of Variance Test ----
+
+#Levene's test is used to assess whether the variances across groups are equal. A p-value greater than 0.05 indicates that the variances are homogeneous.
+
+levene_summary <- list()
+
+for (variable in 5:length(variables)){
+  
+  # skip columns with NAs
+  if (is.na(data_clean[1 , variables[variable]])){
+    next
+  }
+  
+  print(variables[variable])
+
+  levene <- leveneTest(data_clean[[variables[variable]]] ~ data_clean[[x]])
+
+  levene_summary[[variables[variable]]] <- levene
+  
+  print(paste("Levene's", 'Test performed for:', variables[variable]))
+
+}
+
+## 11.2 ANOVA ----
+
+#Checks variation between the group means, then compares it to the variation within each group and if the between-group differences are much bigger than the normal variation within groups, then the groups are truly different. Simply, ANOVA tests whether the differences between the group averages are bigger than what we’d expect from random noise alone.
+
+#-   p \< 0.05 → “significant difference”
+
+# example by hand
+# anova <- aov(Pmic~Depth, data = data_clean)
+# summary(anova)
+
+anova_summary <- list()
+anova_model <- list()
+
+# loop through all variables against Depth
+for (variable in 5:length(variables)){
+
+  # skip columns with NAs
+  if (is.na(data_clean[1 , variables[variable]])){
+    next
+  }
+  
+  anova <- aov(data_clean[[variables[variable]]] ~ data_clean[[variables[x]]])
+
+  anova_summary[[variables[variable]]] <- summary(anova)
+  anova_model[[variables[variable]]] <- anova
+  
+  print(paste('ANOVA performed for:', variables[variable]))
+}
+
+#You can access the results for each variable by calling the respective list element.
+
+print(paste('Variable:', variables[y]))
+print(anova_summary[[variables[y]]])
+
+## 11.3 Tukey's HSD ----
+
+#Tukey's Honest Significant Difference test is a post-hoc test used after ANOVA to find out which specific groups' means (compared with each other) are different.
+
+# example by hand
+# tukey <- TukeyHSD(anova)
+# print(tukey)
+
+anova_variables <- names(anova_summary)
+tukey_summary <- list()
+
+for (variable in 1:length(anova_summary)){
+  
+  tukey <- TukeyHSD(anova_model[[variable]])
+
+  tukey_summary[[anova_variables[variable]]] <- tukey
+  
+  print(paste("Tukey's HSD", 'performed for:', variables[variable]))
+  
+}
+
+#You can access the results for each variable by calling the respective list element.
+
+print(paste('Variable:', variables[y]))
+print(tukey_summary[[variables[y]]])
+
+### 11.1-3.1 Saving ----
+
+#Run the code below to export all statistical results into a separate dataframe.
+
+export_data <- data.frame()
+
+for (variable in names(anova_summary)){
+  export_data <- rbind(export_data, 
+                       data.frame(variable = variable,
+                                  levene_p = levene_summary[[variable]][["Pr(>F)"]][1],
+                                  shapiro_p = shapiro_summary[[variable]][["p.value"]],
+                                  anova_p = anova_summary[[variable]][[1]][["Pr(>F)"]][1],
+                                  tukey_p = tukey_summary[["soil_DW"]][["data_clean[[variables[x]]]"]][,"p adj"]
+                                  ))
+}
+
+rownames(export_data) <- 1:nrow(export_data)
+export_data$tukey_groups <- rep(c("B-A", "C-A", "C-B"), times = nrow(export_data)/3)
+
+#Save in a desired file path.
+
+export_data_excel <- write.xlsx(export_data, 
+                               file = paste0(path, "Data/statistical_test_results.xlsx"), 
+                               sheetName = "stat_test", 
+                               rowNames = F,
+                               overwrite = T)
+
+## ...11.4 *Special Case - PERMANOVA - not used, skip*
+
+#Multivariate ANOVA (MANOVA) is an extension of ANOVA that allows for the analysis of multiple dependent variables simultaneously. It assesses whether the mean vectors of the dependent variables differ across groups defined by one or more independent variables.
+
+# install.packages("devtools")
+# install.packages("cli")
+# devtools::install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
+
+# library(vegan)
+# library(pairwiseAdonis)
+# adonis2(data_clean[,34:41] ~ Depth, 
+#         data = data_clean, 
+#         permutations = 9999, 
+#         method = "euclidean")
+# 
+# pairwise.adonis2(data_clean[,5:ncol(data_clean)] ~ Horizon,
+#                  data = data_clean,
+#                  method = "euclidean",
+#                  perm = 9999,
+#                  p.adjust.m = "fdr")
+
+# install.packages("devtools")
+# install.packages("cli")
+# devtools::install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
+
+# manova <- manova(cbind(data_clean$`Olsen_P_[DIP]`, data_clean$Soil_TIP, data_clean$Soil_TOP, data_clean$Soil_TP, data_clean$Pmic, data_clean$`DIP/TP`, data_clean$`Pmic/TP`, data_clean$`TOP/TP`) ~ data_clean$Depth)
+# summary.aov(manova)
+
+# 12 Correlation Plots - P-Group ----
+
+#Correlation plots are useful to visualize the relationships between multiple variables simultaneously.
+
+## 12.1 General ----
+
+#Depicts one, general trend line and correlation.
+
+correlations_gen <- ggpairs(data_clean, 
+                        columns = c(26:28,30:37), # from cellulase to TOP/TP
+                        title = "Correlations P-Group", 
+                        upper = list(continuous = wrap("cor", size = 2.5)),
+                        lower = list(continuous = "smooth"))+
+  theme_bw(base_size = 8)
+
+correlations_gen
+
+## 12.2 Within Layers ----
+
+#Shows correlations and trendlines within layers A, B and C.
+
+correlations_layer <- ggpairs(data_clean, 
+                        columns = c(26:28,30:37), # from cellulase to TOP/TP
+                        title = "Correlations P-Group", 
+                        upper = list(continuous = wrap("cor", size = 2.5)),
+                        lower = list(continuous = "smooth"),
+                        aes(colour = Depth))+
+  theme_bw(base_size = 8)
+
+correlations_layer
+
+  #scale_colour_manual(values = c(col1, col2, col3))+
+  #scale_colour_manual(values = c(col1, col2, col3))
+
+### 12.1-2.1 Saving ----
+
+ggsave(filename = paste0(path, "Figures/Correlations/correlations_gen.pdf"),
+       plot = correlations_gen)
+ggsave(filename = paste0(path, "Figures/Correlations/correlations_layer.pdf"),
+       plot = correlations_layer)
+
+# 13 OLS Regression Graphical ----
+
+#Ordinary Least Squares (OLS) regression is a statistical method, it is used to model the relationship between a dependent variable and one or more independent variables by minimizing the sum of the squared differences between observed values of continuous data.
+
+### 13.1 General ----
+
+#Depicts one, general trend line.
+
+ols_gen <- ggplot(data_clean, aes(x = data_clean[[z]], 
+                       y = data_clean[[y]]))+
+                       #colour = data_clean[[x]], # within layers A, B and C
+                       #))+
+  geom_point(size = 3, aes(colour = data_clean[[x]],
+                           shape = data_clean[[x]]))+ # general pattern
+  
+  geom_smooth(method = "lm", colour = 'black', alpha = 0.1, se = T)+
+  
+  scale_colour_manual(values = c(col1, col2, col3))+
+  scale_shape_manual(values = c("A" = 16, "B" = 17, "C" = 15))+
+  
+      labs(title = paste(gsub('_', ' ', variables[y]), ' x ', gsub('_', ' ', variables[x])),
+           y = paste(gsub('_', ' ', variables[y]), ' ', units[1, variables[y]]),
+           x = paste(gsub('_', ' ', variables[x]), ' ', units[1, variables[x]]),
+           colour = 'Legend',
+           shape = 'Legend')+
+  
+  theme_bw()+
+  
+    theme(plot.title = element_text(size=18, face = 'bold'),
+        axis.title.x = element_text(size=16, colour = 'black'), 
+        axis.text.x = element_text(size=14, colour = 'black'),
+        axis.title.y = element_text(size=16, colour = 'black'), 
+        axis.text.y = element_text(size=14, colour = 'black'),
+        legend.text = element_text(size=12), 
+        legend.title = element_text(size=14))
+
+ols_gen
+
+### 13.2 Within Layers ----
+
+#Depicts multiple trend lines for each layer A, B and C.
+
+ols_layer <- ggplot(data_clean, aes(x = data_clean[[z]], 
+                       y = data_clean[[y]],
+                       colour = data_clean[[x]], # within layers A, B and C
+                       fill = data_clean[[x]],
+                       ))+
+  
+  geom_point(size = 4, aes(shape = data_clean[[x]]), colour = 'black')+
+  geom_point(size = 3, aes(shape = data_clean[[x]]))+
+  
+  geom_smooth(method = "lm",
+              size = 1.2,
+              colour = "black") +
+  
+  geom_smooth(method = "lm", 
+              alpha = 0.1,
+              size = 0.8)+
+  
+  scale_colour_manual(values = c(col1, col2, col3))+
+  scale_fill_manual(values = c(col1, col2, col3))+
+  scale_shape_manual(values = c("A" = 16, "B" = 17, "C" = 15))+
+  
+      labs(title = paste(gsub('_', ' ', variables[y]), ' x ', gsub('_', ' ', variables[])),
+           y = paste(gsub('_', ' ', variables[y]), ' ', units[1, variables[y]]),
+           x = paste(gsub('_', ' ', variables[x]), ' ', units[1, variables[x]]),
+           colour = 'Legend',
+           shape = 'Legend',
+           linetype = 'Legend',
+           fill = 'Legend')+
+  
+  theme_bw()+
+  
+    theme(plot.title = element_text(size=18, face = 'bold'),
+        axis.title.x = element_text(size=16, colour = 'black'), 
+        axis.text.x = element_text(size=14, colour = 'black'),
+        axis.title.y = element_text(size=16, colour = 'black'), 
+        axis.text.y = element_text(size=14, colour = 'black'),
+        legend.text = element_text(size=12), 
+        legend.title = element_text(size=14))
+
+ols_layer
+
+### 13.1-2.1 Automated Plotting ----
+
+ols_plots_gen <- list()
+ols_plots_layers <- list()
+for (variable in 7:length(variables)){
+  
+  if (is.na(data_clean[1 , variables[variable]])){
+    next
+  }
+  
+  ols_gen <- ggplot(data_clean, aes(x = .data[[variables[variable]]], 
+                                    y = .data[[variables[y]]]))+
+    
+    geom_point(size = 3, aes(colour = .data[[variables[x]]], fill = .data[[variables[x]]]))+
+    
+    geom_smooth(method = "lm", colour = 'black', alpha = 0.1)+
+    
+    scale_colour_manual(values = c(col1, col2, col3))+
+  scale_shape_manual(values = c("A" = 16, "B" = 17, "C" = 15))+
+    
+      labs(title = paste(gsub('_', ' ', variables[y]), ' x ', gsub('_', ' ', variables[variable])),
+           y = paste(gsub('_', ' ', variables[y]), ' ', units[1, variables[y]]),
+           x = paste(gsub('_', ' ', variables[variable]), ' ', units[1, variables[variable]]))+
+    
+    theme_bw()+
+    
+      theme(plot.title = element_text(size=18, face = 'bold'),
+          axis.title.x = element_text(size=16, colour = 'black'), 
+          axis.text.x = element_text(size=14, colour = 'black'),
+          axis.title.y = element_text(size=16, colour = 'black'), 
+          axis.text.y = element_text(size=14, colour = 'black'))
+  
+  ols_plots_gen[[variables[variable]]] <- ols_gen
+  
+  ols_layers <- ggplot(data_clean, aes(x = .data[[variables[variable]]], 
+                                       y = .data[[variables[y]]],
+                                       colour = .data[[variables[x]]],
+                                       fill = .data[[variables[x]]]))+
+    
+    geom_point(size = 4, aes(shape = .data[[variables[x]]]), colour = 'black')+
+    geom_point(size = 3, aes(shape = .data[[variables[x]]]))+
+    
+    geom_smooth(method = "lm",
+                size = 1.2,
+                colour = "black") +
+    
+    geom_smooth(method = "lm", 
+                alpha = 0.1,
+                size = 0.8)+
+    
+    scale_colour_manual(values = c(col1, col2, col3))+
+  scale_fill_manual(values = c(col1, col2, col3))+
+  scale_shape_manual(values = c("A" = 16, "B" = 17, "C" = 15))+
+    
+      labs(title = paste(gsub('_', ' ', variables[y]), ' x ', gsub('_', ' ', variables[variable])),
+           y = paste(gsub('_', ' ', variables[y]), ' ', units[1, variables[y]]),
+           x = paste(gsub('_', ' ', variables[variable]), ' ', units[1, variables[variable]]))+
+    
+    theme_bw()+
+    
+      theme(plot.title = element_text(size=18, face = 'bold'),
+          axis.title.x = element_text(size=16, colour = 'black'), 
+          axis.text.x = element_text(size=14, colour = 'black'),
+          axis.title.y = element_text(size=16, colour = 'black'), 
+          axis.text.y = element_text(size=14, colour = 'black'))
+  
+  ols_plots_layers[[variables[variable]]] <- ols_layers
+}
+ 
+#### 13.1-2.1.1 Saving ----
+ 
+for (plot in names(ols_plots_gen)){
+  plot_name <- gsub("[/\\?<>\\:*|\"]", "_", plot)
+  ggsave(filename = paste0(path, "Figures/OLS Regression/ols_gen_", plot_name, ".pdf", sep = ""),
+         plot = ols_plots_gen[[plot]])
+  
+  ggsave(filename = paste0(path, "Figures/OLS Regression/ols_layers_", plot_name, ".pdf", sep = ""),
+         plot = ols_plots_layers[[plot]])
+}
+
+# 14 OLS Regression Statistics ----
+
+#Ordinary Least Squares (OLS) regression is a statistical method used to model the relationship between a dependent variable and one or more independent variables by minimizing the sum of the squared differences between observed values.
+
+## 14.1 One Predictor ----
+
+# example by hand
+# ols <- lm(data_clean[[y]]~data_clean[[x]])
+# summary(ols)
+
+ols_summary <- list()
+ols_model <- list()
+
+# loop through all variables against Depth
+for (variableX in 7:length(variables)){
+
+  # skip columns with NAs
+  if (is.na(data_clean[1 , variables[variableX]])){
+    next
+  }
+  
+  ols_summary[[variables[variableX]]] <- list()
+  ols_model[[variables[variableX]]] <- list()
+  
+  for (variableY in 7:length(variables)){
+    # skip columns with NAs
+    if (is.na(data_clean[1 , variables[variableY]]) | variableX == variableY ){
+      next
+    }
+    
+    ols <- lm(data_clean[[variables[variableY]]] ~ data_clean[[variables[variableX]]])
+    
+    ols_summary[[variables[variableX]]][[variables[variableY]]] <- summary(ols)
+    ols_model[[variables[variableX]]][[variables[variableY]]] <- ols
+  }
+  print(paste('OLS Regression performed for:', variables[variableX]))
+}
+
+#You can access the results for each variable by calling the respective list element.
+
+print(paste('Variable Y:', variables[y], 'Variable "X":', variables[z]))
+print(ols_summary[[variables[z]]][[variables[y]]])
+
+### 14.1.1 Saving ----
+
+export_data <- data.frame()
+
+for (variableX in names(ols_summary)){
+  for (variableY in names(ols_summary[[variableX]])){
+    variable <- paste(variableY, "_vs_", variableX, sep = "")
+    
+  export_data <- rbind(export_data, 
+                       data.frame(variableY_vs_variableX = variable,
+                                  ols_p = ols_summary[[variableX]][[variableY]][["coefficients"]][2,"Pr(>|t|)"],
+                                  r_adjusted = ols_summary[[variableX]][[variableY]][["adj.r.squared"]]))
+  }
+}
+
+export_data_excel <- write.xlsx(export_data, 
+                               file = paste0(path, "Data/ols_results.xlsx"), 
+                               sheetName = "ols", 
+                               rowNames = F,
+                               overwrite = T)
+
+## 14.2 Special Cases Multiple Predictors ----
+
+#Multiple predictors can be included in the model to account for additional sources of variation.
+
+# 2 predictors
+print(paste('Variable Y:', variables[y], 'Variable "X1":', variables[z], 'Variable "X2":', variables[w]))
+ols_multi <- lm(data_clean[[y]]~data_clean[[z]]*data_clean[[w]])
+ols_multi_summary <- summary(ols_multi)
+ols_multi_summary
+
+# 3 predictors
+print(paste('Variable Y:', variables[y], 'Variable "X1":', variables[z], 'Variable "X2":', variables[w], 'Variable "X3":', variables[q]))
+ols_multi <- lm(data_clean[[y]]~data_clean[[z]]*data_clean[[w]]*data_clean[[q]])
+ols_multi_summary <- summary(ols_multi)
+ols_multi_summary
+
+### 14.2.1 Saving ----
+
+export_data <- data.frame()
+
+# 2 predictors
+variable <- paste(variables[y], "_vs_", variables[z], "_and_", variables[w], sep = "")
+
+# 3 predictors
+#variable <- paste(variables[y], "_vs_", variables[z], "_and_", variables[w], "_and_", variables[q], sep = "")
+
+for (group in 2:length(ols_multi_summary[["coefficients"]][,"Pr(>|t|)"])){
+
+  export_data <- rbind(export_data,
+                       data.frame(variableY = variables[y],
+                                  variableX1 = variables[z],
+                                  variableX2 = variables[w],
+                                  #variableX3 = variables[q] # 3 predictors
+                         group = rownames(ols_multi_summary[["coefficients"]])[group],
+                                  multi_p = ols_multi_summary[["coefficients"]][group,"Pr(>|t|)"]))
+}
+
+export_data_excel <- write.xlsx(export_data, 
+                               file = "../../Data/ols_multi_results.xlsx", 
+                               sheetName = "ols_multi", 
+                               rowNames = F,
+                               overwrite = T)
+
+# ...15 LMM Regression - not used, skip ----
+
+#Linear Mixed Models (LMM) are an extension of linear models that allow for the inclusion of both fixed and random effects. They are particularly useful when dealing with hierarchical or grouped data, where observations within the same group may be correlated. 
+
+# ct(lmm, terms = c(data_clean[[w]], data_clean[[w]])))
+# 
+# print(paste('Variable Y:', variables[y], 'Variable "X1":', variables[z], 'Variable "X2":', variables[w], 'Variable "X3":', variables[q]))
+# 
+# lmm <- lmer(Pmic ~ Soil_TOP * Depth + (1|Plot), data = data_clean)
+# summary(lmm)
+# lmm2 <- lmer(Pmic ~ Soil_TOP * Depth + (1 + Soil_TOP|Plot), data = data_clean)
+# summary(lmm2)
+# 
+# p1 <- ggpredict(lmm, terms = c('Soil_TOP', 'Depth', 'Plot'), show_ci = T, data = T)
+# 
+# plot(p1)
+# p2 <- ggpredict(lmm, terms = c('Soil_TOP', 'Depth', 'Plot'), show_ci = T, data = T)
+# 
+# plot(p2)
+# anova(lmm, lmm2)
+
+

@@ -116,6 +116,8 @@ if(!require(ggeffects)){
 }
 ```
 
+#The package *openxlsx* serves for writing data into excel files.
+
 ```{r}
 if(!require(openxlsx)){
     install.packages('openxlsx')
