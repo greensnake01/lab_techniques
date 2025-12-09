@@ -851,7 +851,7 @@ ols_gen <- ggplot(data_clean, aes(x = data_clean[[z]],
   geom_point(size = 3, aes(colour = data_clean[[x]],
                            shape = data_clean[[x]]))+ # general pattern
   
-  geom_smooth(method = "lm", colour = 'black', alpha = 0.1)+
+  geom_smooth(method = "lm", colour = 'black', alpha = 0.1, se = T)+
   
   scale_colour_manual(values = c(col1, col2, col3))+
   scale_shape_manual(values = c("A" = 16, "B" = 17, "C" = 15))+
@@ -935,6 +935,7 @@ for (variable in 7:length(variables)){
   
   ols_gen <- ggplot(data_clean, aes(x = .data[[variables[variable]]], 
                                     y = .data[[variables[y]]]))+
+    
     geom_point(size = 3, aes(colour = .data[[variables[x]]], fill = .data[[variables[x]]]))+
     
     geom_smooth(method = "lm", colour = 'black', alpha = 0.1)+
