@@ -128,7 +128,11 @@ if(!require(openxlsx)){
 To access the mastersheet data, please use the 2nd cell below (uncomment and run) and skip the 1st cell completely.
 
 ```{r 1st}
-data <- read.csv('../../data/EcoLab 2025 Mastersheet.csv', sep = ',')
+data <- read.csv('../../Data/_EcoLab 2025 Mastersheet.xlsx - Mastersheet.csv', sep = ',')
+```
+
+```{r 1st}
+#data <- read.csv('../../data/EcoLab 2025 Mastersheet.csv', sep = ',')
 ```
 
 ```{r 2nd}
@@ -214,15 +218,15 @@ print(variables)
 For example, for the x-axis we would like 'pH' and for the y axis, 'TP': x = 'pH' and y = 'TP'.
 
 ```{r}
-x = 4 # 4 for Depth, 35 for Soil_TP, 38 for Pmic, 7 for pH
-y = 38
+x = 4 # 4 for Depth, 31 for Soil_TP, 34 for Pmic, 7 for pH
+y = 34
 
 # one predictor
-z = 35 # variable "X" for OLS regressions
+z = 31 # variable "X" for OLS regressions
 
 # more predictors
 w = 7  # 2nd variable for multiple predictors in OLS regressions
-q = 51 # 3rd variable
+q = 47 # 3rd variable
 
 fill = x # variable for filling colors in box plots and bar plots
 
@@ -245,7 +249,7 @@ col3 = '#f3e9dc'
 ```{r}
 distribution_plots <- list()
 
-for (variableX in 34:41){
+for (variableX in c(26:28,30:37)){ # from cellulase to TOP/TP
   # aes(sample = for qq-plot; x = for histogram)
   plot <- ggplot(data_clean, aes(sample = .data[[variables[variableX]]]))+
   #geom_histogram(bins = 5)+
@@ -794,7 +798,7 @@ Depicts one, general trend line and correlation.
 
 ```{r}
 correlations_gen <- ggpairs(data_clean, 
-                        columns = 34:41, 
+                        columns = c(26:28,30:37), # from cellulase to TOP/TP
                         title = "Correlations P-Group", 
                         upper = list(continuous = wrap("cor", size = 2.5)),
                         lower = list(continuous = "smooth"))+
@@ -809,7 +813,7 @@ Shows correlations and trendlines within layers A, B and C.
 
 ```{r}
 correlations_layer <- ggpairs(data_clean, 
-                        columns = 34:41, 
+                        columns = c(26:28,30:37), # from cellulase to TOP/TP
                         title = "Correlations P-Group", 
                         upper = list(continuous = wrap("cor", size = 2.5)),
                         lower = list(continuous = "smooth"),
