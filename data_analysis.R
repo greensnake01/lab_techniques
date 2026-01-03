@@ -53,7 +53,7 @@ if(!require(ggplot2)){
 #The package *tidyverse* serves as an alternative to data handling.
 
 if(!require(tidyverse)){
-  install.packages('tidyvers')
+  install.packages('tidyverse')
   library(tidyverse)
 }
 
@@ -665,7 +665,7 @@ for (variable in names(anova_summary)){
                                   levene_p = levene_summary[[variable]][["Pr(>F)"]][1],
                                   shapiro_p = shapiro_summary[[variable]][["p.value"]],
                                   anova_p = anova_summary[[variable]][[1]][["Pr(>F)"]][1],
-                                  tukey_p = tukey_summary[["soil_DW"]][["data_clean[[variables[x]]]"]][,"p adj"]
+                                  tukey_p = tukey_summary[[variable]][["data_clean[[variables[x]]]"]][,"p adj"]
                                   ))
 }
 
