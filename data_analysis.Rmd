@@ -198,18 +198,30 @@ data_clean$Depth <- factor(data_clean$Depth, levels = c('A', 'B', 'C'))
 #if necessary, uncomment the comment below and run
 #data_clean[20,] <- data[4,] # add the units into the last row 
 
-# correct negative values of Cmic
-#data_clean$Cmic[data_clean$Cmic < 0] <- 10
+# correct negative values of Cmic and Nmic
+data_clean$Cmic[data_clean$Cmic < 0] <- NA
+data_clean$Nmic[data_clean$Nmic < 0] <- NA
 
 # add enzymes/Cmic
 #data_clean$`Cellulase/Cmic` <- data_clean$Cellulase / data_clean$Cmic
 #data_clean$`Chitinase/Cmic` <- data_clean$Chitinase / data_clean$Cmic
 #data_clean$`Phosphatase/Cmic` <- data_clean$Phosphatase / data_clean$Cmic
 
+#add P pool
+data_clean$`Olsen_P_[DIP]/TP` <- (data_clean$`Olsen_P_[DIP]` / data_clean$Soil_TP) * 1100
+data_clean$`TIP/TP` <- (data_clean$Soil_TIP / data_clean$Soil_TP) * 100
+
 # add enzymes/Pmic
 data_clean$`Cellulase/Pmic` <- data_clean$Cellulase / data_clean$Pmic
 data_clean$`Chitinase/Pmic` <- data_clean$Chitinase / data_clean$Pmic
 data_clean$`Phosphatase/Pmic` <- data_clean$Phosphatase / data_clean$Pmic
+
+# add enzymes/appropriate C- or N-mic
+data_clean$`Cellulase/Cmic` <- data_clean$Cellulase / data_clean$Cmic
+data_clean$`Chitinase/Cmic` <- data_clean$Chitinase / data_clean$Cmic
+data_clean$`Chitinase/Nmic` <- data_clean$Chitinase / data_clean$Nmic
+
+#colnames(data_clean[36]) <- "Olsen_P_[DIP]/TP"
 
 
 str(data_clean) # print the value types
@@ -224,15 +236,26 @@ colnames(units) <- colnames(data_clean[c(1:55)-1])
 
 colnames(units) <- gsub(' ', '_', colnames(units)) # change space to '_'
 
-rownames(units) <- 
+rownames(units) <- 1
 
+#add P pool
+units$`Olsen_P_[DIP]/TP` <- "%"
+units$`TIP/TP` <- "%"
+
+units$`Cmic` <- "[μg C g-1 DW]"
+units$`Nmic` <- "[μg N g-1 DW]"
+units$Pmic <- "[µg P g-1 DW]"
 units$Cellulase <- "[µmol g-1 DW h-1]"  
 units$Chitinase <- "[µmol g-1 DW h-1]"
 units$Phosphatase <- "[µmol g-1 DW h-1]"
 units$Protease <- "[µmol g-1 DW h-1]"
-units$`Cellulase/Pmic` <- "[µmol g-1 DW h-1 / µg g-1 DW]" # fix unit issue
-units$`Chitinase/Pmic` <- "[µmol g-1 DW h-1 / µg g-1 DW]" # fix unit issue
-units$`Phosphatase/Pmic` <- "[µmol g-1 DW h-1 / µg g-1 DW]" # fix unit issue
+units$`Cellulase/Pmic` <- "[µmol g-1 DW h-1 / µg P g-1 DW]" # fix unit issue
+units$`Chitinase/Pmic` <- "[µmol g-1 DW h-1 / µg P g-1 DW]" # fix unit issue
+units$`Phosphatase/Pmic` <- "[µmol g-1 DW h-1 / µg P g-1 DW]" # fix unit issue
+
+units$`Cellulase/Cmic` <- "[µmol g-1 DW h-1 / µg C g-1 DW]"
+units$`Chitinase/Cmic` <- "[µmol g-1 DW h-1 / µg C g-1 DW]"
+units$`Chitinase/Nmic` <- "[µmol g-1 DW h-1 / µg N g-1 DW]"
 
 units # print output
 ```
@@ -296,14 +319,14 @@ For example, for the x-axis we would like 'pH' and for the y axis, 'TP': x = 'pH
 
 ```{r}
 
-dataframe = data_clean # data_clean or data_clean
+dataframe = data_clean # data_clean or data_clean_sqrt or data_clean_log
 
 # interval comprising column numbers we would like to use
 from = 7
-to = 57
+to = 59
 
 x = 4 # 4 for Depth, 31 for Soil_TP, 34 for Pmic, 7 for pH
-y = 57
+y = 58
 
 # one predictor
 z = 31 # variable "X" for OLS regressions
@@ -333,7 +356,7 @@ col3 = '#f3e9dc'
 ```{r}
 distribution_plots <- list()
 
-for (variableX in c(27:29,31:38,55:57)){ # from cellulase through TOP/TP to Cellulase, Chitinase and Phosphatase / Pmic
+for (variableX in c(27:29,31:38,55:62)){ # from cellulase through TOP/TP to Cellulase, Chitinase and Phosphatase / Pmic and C-/N-mic
   # aes(sample = for qq-plot; x = for histogram)
   plot <- ggplot(data_clean, aes(sample = .data[[variables[variableX]]]))+
   #geom_histogram(bins = 5)+
@@ -371,6 +394,7 @@ box <- ggplot(data_clean, aes(.data[[variables[x]]],
                colour = 'black')+
   
   scale_fill_manual(values = c(col1, col2, col3))+
+  scale_y_continuous(expand = expansion(mult = c(0.05, 0.3)))+
   
     labs(title = paste(gsub('_', ' ', variables[y]), ' x ', variables[x]),
          y = paste(gsub('_', ' ', variables[y]), ' ', units[1, variables[y]]),
@@ -394,7 +418,7 @@ box
 
 ```{r}
 box_plots <- list()
-for (variable in 7:length(variables)){
+for (variable in c(27:29,31:38,55:62)){ # all 7:length(variables)
   
   if (is.na(data_clean[1 , variables[variable]])){
     next
@@ -409,6 +433,7 @@ for (variable in 7:length(variables)){
                  colour = 'black')+
     
     scale_fill_manual(values = c(col1, col2, col3))+
+    scale_y_continuous(expand = expansion(mult = c(0.05, 0.3)))+
     
       labs(title = paste(gsub('_', ' ', variables[variable]), ' x ', variables[x]),
            y = paste(gsub('_', ' ', variables[variable]), ' ', units[1, variables[variable]]),
@@ -886,7 +911,7 @@ for (variable in names(anova_summary)){
                                   shapiro_p = shapiro_summary[[variable]][["p.value"]],
                                   anova_p = anova_summary[[variable]][[1]][["Pr(>F)"]][1],
                                   tukey_p = tukey_summary[[variable]][["dataframe[[variables[x]]]"]][,"p adj"],
-                                  kruskall_wallis_p = kruskal_wallis_summary[[variable]][["p"]],
+                                  kruskal_wallis_p = kruskal_wallis_summary[[variable]][["p"]],
                                   dunn_p = dunn_summary[[variable]][["P.adjusted"]]))
 }
 
@@ -898,7 +923,7 @@ Save in a desired file path.
 
 ```{r}
 export_data_excel <- write.xlsx(export_data, 
-                               file = paste0(path, "Data/stats_results.xlsx"), 
+                               file = paste0(path, "Data/sqrt_stats_results_mics.xlsx"), 
                                sheetName = "stat_test", 
                                rowNames = F,
                                overwrite = T)
