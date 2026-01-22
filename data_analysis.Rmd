@@ -198,6 +198,9 @@ data_clean$Depth <- factor(data_clean$Depth, levels = c('A', 'B', 'C'))
 #if necessary, uncomment the comment below and run
 #data_clean[20,] <- data[4,] # add the units into the last row 
 
+# change variable name for DIP/TP to Olsen_P_[DIP]
+colnames(data_clean)[36] <- 'Olsen_P_[DIP]/TP'
+
 # correct negative values of Cmic and Nmic
 data_clean$Cmic[data_clean$Cmic < 0] <- NA
 data_clean$Nmic[data_clean$Nmic < 0] <- NA
@@ -207,8 +210,8 @@ data_clean$Nmic[data_clean$Nmic < 0] <- NA
 #data_clean$`Chitinase/Cmic` <- data_clean$Chitinase / data_clean$Cmic
 #data_clean$`Phosphatase/Cmic` <- data_clean$Phosphatase / data_clean$Cmic
 
-#add P pool
-data_clean$`Olsen_P_[DIP]/TP` <- (data_clean$`Olsen_P_[DIP]` / data_clean$Soil_TP) * 1100
+# add P pool
+#data_clean$`Olsen_P_[DIP]/TPa` <- (data_clean$`Olsen_P_[DIP]` / data_clean$Soil_TP) * 100
 data_clean$`TIP/TP` <- (data_clean$Soil_TIP / data_clean$Soil_TP) * 100
 
 # add enzymes/Pmic
@@ -221,8 +224,13 @@ data_clean$`Cellulase/Cmic` <- data_clean$Cellulase / data_clean$Cmic
 data_clean$`Chitinase/Cmic` <- data_clean$Chitinase / data_clean$Cmic
 data_clean$`Chitinase/Nmic` <- data_clean$Chitinase / data_clean$Nmic
 
-#colnames(data_clean[36]) <- "Olsen_P_[DIP]/TP"
+# try N:P ratio - soil? mic?
+data_clean$`Soil_C/N` <- round(data_clean$Soil_C/data_clean$Soil_N, 2)
+colnames(data_clean)[10] <- 'Soil_C:N'
+data_clean$`Microbial_C:N` <- round(data_clean$Cmic/data_clean$Nmic, 2)
 
+# try C:P
+data_clean$`Microbial_C:P` <- round(data_clean$Cmic/data_clean$Pmic, 2)
 
 str(data_clean) # print the value types
 ```
@@ -256,6 +264,9 @@ units$`Phosphatase/Pmic` <- "[µmol g-1 DW h-1 / µg P g-1 DW]" # fix unit issue
 units$`Cellulase/Cmic` <- "[µmol g-1 DW h-1 / µg C g-1 DW]"
 units$`Chitinase/Cmic` <- "[µmol g-1 DW h-1 / µg C g-1 DW]"
 units$`Chitinase/Nmic` <- "[µmol g-1 DW h-1 / µg N g-1 DW]"
+
+units$`Microbial_C:N` <- ""
+units$`Microbial_C:P` <- ""
 
 units # print output
 ```
@@ -418,11 +429,11 @@ box
 
 ```{r}
 box_plots <- list()
-for (variable in c(27:29,31:38,55:62)){ # all 7:length(variables)
+for (variable in c(10,27:29,31:38,55:63)){ # all 7:length(variables)
   
-  if (is.na(data_clean[1 , variables[variable]])){
-    next
-  }
+  # if (is.na(data_clean[1 , variables[variable]])){
+  #   next
+  # }
   
   boxplot <- ggplot(data_clean, aes(.data[[variables[x]]],
                                     .data[[variables[variable]]], 
@@ -923,7 +934,7 @@ Save in a desired file path.
 
 ```{r}
 export_data_excel <- write.xlsx(export_data, 
-                               file = paste0(path, "Data/sqrt_stats_results_mics.xlsx"), 
+                               file = paste0(path, "Data/stats_results_C_N.xlsx"), 
                                sheetName = "stat_test", 
                                rowNames = F,
                                overwrite = T)
