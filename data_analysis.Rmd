@@ -132,7 +132,7 @@ if(!require(ggeffects)){
 }
 ```
 
-#The package *openxlsx* serves for writing data into excel files.
+The package *openxlsx* serves for writing data into excel files.
 
 ```{r}
 if(!require(openxlsx)){
@@ -232,6 +232,8 @@ data_clean$`Microbial_C:N` <- round(data_clean$Cmic/data_clean$Nmic, 2)
 # try C:P
 data_clean$`Microbial_C:P` <- round(data_clean$Cmic/data_clean$Pmic, 2)
 
+data_clean$`C:P(TOP)` <- round(data_clean$Soil_C/data_clean$Soil_TOP, 2)
+
 str(data_clean) # print the value types
 ```
 
@@ -267,6 +269,11 @@ units$`Chitinase/Nmic` <- "[µmol g-1 DW h-1 / µg N g-1 DW]"
 
 units$`Microbial_C:N` <- ""
 units$`Microbial_C:P` <- ""
+
+units$`Depth_test` <- ""
+units$`Depth_numeric` <- ""
+
+units$`C:P(TOP)` <- ""
 
 units # print output
 ```
@@ -330,7 +337,7 @@ For example, for the x-axis we would like 'pH' and for the y axis, 'TP': x = 'pH
 
 ```{r}
 
-dataframe = data_clean # data_clean or data_clean_sqrt or data_clean_log
+dataframe = data_clean_log # data_clean or data_clean_sqrt or data_clean_log
 
 # interval comprising column numbers we would like to use
 from = 7
@@ -429,7 +436,7 @@ box
 
 ```{r}
 box_plots <- list()
-for (variable in c(10,27:29,31:38,55:63)){ # all 7:length(variables)
+for (variable in c(10,27:29,31:38,55:63,66)){ # all 7:length(variables)
   
   # if (is.na(data_clean[1 , variables[variable]])){
   #   next
@@ -934,7 +941,7 @@ Save in a desired file path.
 
 ```{r}
 export_data_excel <- write.xlsx(export_data, 
-                               file = paste0(path, "Data/stats_results_C_N.xlsx"), 
+                               file = paste0(path, "Data/log_stats_results_C_P.xlsx"), 
                                sheetName = "stat_test", 
                                rowNames = F,
                                overwrite = T)
@@ -1548,5 +1555,19 @@ ggplot(data_clean, aes(x = `Olsen_P_[DIP]`, y = `Phosphatase/Pmic`)) +
 ```{r}
 linear_model <- lm(`Phosphatase/Pmic` ~ `Olsen_P_[DIP]`, data_clean)
 summary(linear_model)
+```
+```{r}
+data_clean$Depth_test <- factor(data_clean$Depth, levels = c("A", "B", "C"))
+data_clean$Depth_numeric <- as.numeric(data_clean$Depth_test)
+
+ggplot(data_clean, aes(x = Depth_numeric, y = Soil_TIP))+
+  geom_point()+
+  geom_smooth(method = "lm")
+  
+test_lm <- lm(Depth_numeric ~ Soil_TIP, data_clean) 
+summary(test_lm)
+
+test_lm_npmic <- lm(Nmic ~ Pmic, data_clean) 
+summary(test_lm_npmic)
 ```
 
